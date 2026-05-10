@@ -121,8 +121,39 @@ public class EnemyAI : MonoBehaviour
     public float platformFeetOverlapWidth = 3.2f;
     [Tooltip("Высота OverlapBox под ногами игрока.")]
     public float platformFeetOverlapHeight = 0.55f;
-    [Tooltip("Сколько секунд стоять под платформой по X без успешного отрыва — затем принудительно обходить, а не только прыжок вверх.")]
-    public float platformUnderStuckDetourAfterSeconds = 0.75f;
+    [Header("Прыжок: игрок заметно выше (агрессивнее)")]
+    [Tooltip("Если ΔY ≥ playerAboveMinHeight + это — можно прыгать с более широкого диапазона по X (только вместе с climbIntent).")]
+    public float relaxedHighJumpExtraDy = 0.75f;
+    [Tooltip("Мин. секунд «игрок сверху» в этом режиме (не ниже обычного порога — иначе лишние прыжки).")]
+    public float relaxedHighJumpMinPersistSeconds = 0.14f;
+    [Tooltip("Нижняя граница |ΔX| в ослабленном режиме.")]
+    public float relaxedHighJumpMinHorizontal = 0.1f;
+    [Tooltip("Верхняя граница |ΔX| в ослабленном режиме.")]
+    public float relaxedHighJumpMaxHorizontal = 2.75f;
+    [Header("Прыжок: боковой на платформу")]
+    [Tooltip("Вертикальный коридор свободен и нет нависания — боковой прыжок только если игрок заметно выше (иначе высокие подпрыгивания при беге).")]
+    public float sideJumpRequireExtraDyWhenOpen = 0.55f;
+    [Range(0.55f, 1.05f)]
+    [Tooltip("Множитель импульса вверх для бокового прыжка (ниже — меньше «батут» за спиной).")]
+    public float sideJumpVerticalMultiplier = 0.96f;
+    [Tooltip("Горизонталь к точке приземления в начале бокового прыжка (дуга вместо столба).")]
+    public float sideJumpTakeoffHorizontalSpeed = 3.05f;
+    [Tooltip("Длительность «почти только вверх» в начале бокового прыжка (короче, чем прыжок снизу).")]
+    public float platformJumpVerticalHoldSide = 0.045f;
+    [Header("Прыжок: только с платформы игрока")]
+    [Tooltip("Если вкл — не прыгает «просто потому что игрок выше по Y»: нужна опора под ногами игрока, заметно выше уровня ног врага.")]
+    public bool platformJumpOnlyWhenPlayerOnElevatedSurface = true;
+    [Tooltip("Макс. |опорная поверхность − «ноги» игрока|, чтобы считать, что он стоит на найденном коллайдере.")]
+    public float playerFeetPlatformContactSlop = 0.35f;
+    [Tooltip("Мин. зазор: верх коллайдера под игроком выше низа коллайдера врага (иначе общий пол / один этаж).")]
+    public float platformTopMinAboveEnemyFeet = 0.2f;
+    [Header("Обход к платформе (кратчайший путь)")]
+    [Tooltip("Отступ от края AABB платформы до цели X «встать сбоку», чтобы выйти из-под нависания.")]
+    public float climbEdgeStandoffPad = 0.34f;
+    [Tooltip("Если платформа уже по X — не гоняем к «краям» (они слипаются → дёрганье); идём под точку приземления и прыгаем.")]
+    public float narrowClimbPlatformWidth = 1.15f;
+    [Tooltip("На узкой платформе на сколько расширить допустимый |ΔX| для прыжка «снизу под игроком».")]
+    public float narrowPlatUnderJumpExtraX = 0.22f;
 
     private Rigidbody2D rb;
     private Transform target;
@@ -145,8 +176,8 @@ public class EnemyAI : MonoBehaviour
     private ContactFilter2D airContactFilter;
     private float airBlockedHorizTimer;
     private bool lastJumpWasStraightUnder;
+    private bool lastPlatformJumpWasSideArc;
     private bool underJumpAirborneAssist;
-    private float stuckUnderHangSince = -1f;
 
     void Awake()
     {
@@ -222,31 +253,13 @@ public class EnemyAI : MonoBehaviour
             dyPlayer > playerAboveMinHeight;
 
         bool horizontalUnderHang = IsHorizontallyUnderPlatformCollider();
-        bool groundedForStuck = IsConsideredGroundedForJump();
-        if (climbIntent && horizontalUnderHang && groundedForStuck && rb.linearVelocity.y < 1.1f)
-        {
-            if (stuckUnderHangSince < 0f)
-                stuckUnderHangSince = Time.time;
-        }
-        else if (!horizontalUnderHang || rb.linearVelocity.y > 1.35f)
-            stuckUnderHangSince = -1f;
 
-        bool forceDetourFromStandingUnder = stuckUnderHangSince > 0f &&
-            Time.time - stuckUnderHangSince >= platformUnderStuckDetourAfterSeconds;
-
-        bool jumpStraightFromBelowFootprint = ComputeJumpStraightFromBelowFootprint(dyPlayer) &&
-            !forceDetourFromStandingUnder;
-
-        bool aggressiveStraightJumpOk = climbIntent &&
-            !forceDetourFromStandingUnder &&
-            dyPlayer >= underJumpMinDy && dyPlayer <= underJumpMaxDy &&
-            distanceToLandingX <= Mathf.Max(1.35f, underPlayerJumpMaxX + 0.85f);
+        bool jumpStraightFromBelowFootprint = ComputeJumpStraightFromBelowFootprint(dyPlayer);
 
         bool straightUnderGeometryOk = (StraightUnderJumpGeometryOk(dyPlayer, distanceToLandingX, landingGoalX) ||
-                                        jumpStraightFromBelowFootprint ||
-                                        aggressiveStraightJumpOk) &&
+                                        jumpStraightFromBelowFootprint) &&
             SatisfiesHorizontalJumpStandoff() &&
-            !forceDetourFromStandingUnder;
+            PlatformJumpPlayerSurfaceOk();
 
         bool needDetour = climbIntent && !HasClearVerticalChannelToPlayer() && !straightUnderGeometryOk;
 
@@ -266,36 +279,56 @@ public class EnemyAI : MonoBehaviour
 
         if (climbIntent && needDetour && hasDetourChoice)
         {
-            float innerX = landingGoalX + detourSign * platformDetourOffset;
-            float outerX = landingGoalX + detourSign * (platformDetourOffset + detourPastPlatformEdge);
-            bool pastInner = Mathf.Abs(rb.position.x - innerX) <= detourArrivalSlack
-                || (detourSign > 0f && rb.position.x >= innerX - detourArrivalSlack)
-                || (detourSign < 0f && rb.position.x <= innerX + detourArrivalSlack);
-
-            if (!pastInner)
-                steerX = innerX;
-            else
+            if (TryFindPlatformColliderUnderPlayer(out Collider2D climbPlat))
             {
-                // Пока между врагом и игроком по горизонтали есть платформа — идём дальше в сторону обхода (полный выход из-под нависания).
-                if (PlatformOverhangBlocksPathToPlayer())
-                    steerX = rb.position.x + detourSign * detourClearanceStride;
-                else if (!HasClearVerticalChannelToPlayer())
+                if (EnemyBodyOverlapsPlatformX(climbPlat.bounds, 0.04f))
                 {
-                    steerX = rb.position.x + detourSign * Mathf.Max(detourExtraStep, detourClearanceStride * 0.85f);
-                    if (Mathf.Abs(rb.position.x - outerX) <= detourArrivalSlack)
-                        steerX = rb.position.x + detourSign * detourExtraStep;
+                    if (climbPlat.bounds.size.x <= narrowClimbPlatformWidth)
+                        steerX = landingGoalX;
+                    else
+                    {
+                        steerX = ReachablePlatformEdgeStandX(rb.position.x, climbPlat.bounds, detourSign);
+                        float sd = steerX - rb.position.x;
+                        if (Mathf.Abs(sd) > 0.04f)
+                            detourSign = sd > 0f ? 1 : -1;
+                    }
                 }
                 else
                 {
-                    if (distanceToLandingX > sideJumpMaxHorizontal)
+                    float idealSide = (sideJumpMinHorizontal + sideJumpMaxHorizontal) * 0.5f;
+                    float ex = rb.position.x;
+                    int pickSign = Mathf.Abs(ex - landingGoalX) < 0.18f ? detourSign : (ex > landingGoalX ? 1 : -1);
+                    steerX = landingGoalX + pickSign * idealSide;
+                }
+            }
+            else
+            {
+                float innerX = landingGoalX + detourSign * platformDetourOffset;
+                float outerX = landingGoalX + detourSign * (platformDetourOffset + detourPastPlatformEdge);
+                bool pastInner = Mathf.Abs(rb.position.x - innerX) <= detourArrivalSlack
+                    || (detourSign > 0f && rb.position.x >= innerX - detourArrivalSlack)
+                    || (detourSign < 0f && rb.position.x <= innerX + detourArrivalSlack);
+
+                if (!pastInner)
+                    steerX = innerX;
+                else
+                {
+                    if (PlatformOverhangBlocksPathToPlayer())
+                        steerX = rb.position.x + detourSign * detourClearanceStride;
+                    else if (!HasClearVerticalChannelToPlayer())
+                    {
+                        steerX = rb.position.x + detourSign * Mathf.Max(detourExtraStep, detourClearanceStride * 0.85f);
+                        if (Mathf.Abs(rb.position.x - outerX) <= detourArrivalSlack)
+                            steerX = rb.position.x + detourSign * detourExtraStep;
+                    }
+                    else
                     {
                         float ideal = (sideJumpMinHorizontal + sideJumpMaxHorizontal) * 0.5f;
-                        steerX = landingGoalX + Mathf.Sign(rb.position.x - landingGoalX) * ideal;
+                        float ex = rb.position.x;
+                        float away = Mathf.Abs(ex - landingGoalX) < 0.1f ? detourSign : Mathf.Sign(ex - landingGoalX);
+                        if (Mathf.Abs(away) < 0.01f) away = detourSign;
+                        steerX = landingGoalX + away * ideal;
                     }
-                    else if (distanceToLandingX < sideJumpMinHorizontal * 0.82f)
-                        steerX = landingGoalX + detourSign * sideJumpMinHorizontal;
-                    else
-                        steerX = rb.position.x;
                 }
             }
 
@@ -306,10 +339,14 @@ public class EnemyAI : MonoBehaviour
                 detourStuckTimer = 0f;
             }
 
+            bool underFootprintStuck = horizontalUnderHang &&
+                TryFindPlatformColliderUnderPlayer(out Collider2D hangPlat2) &&
+                EnemyBodyOverlapsPlatformX(hangPlat2.bounds, 0.04f);
+
             if (groundSensor != null && groundSensor.State() && Mathf.Abs(rb.linearVelocity.x) < 0.11f)
             {
                 detourStuckTimer += Time.fixedDeltaTime;
-                if (detourStuckTimer >= flankStuckFlipTime)
+                if (detourStuckTimer >= flankStuckFlipTime && !underFootprintStuck)
                 {
                     detourSign = -detourSign;
                     flankDir = -flankDir;
@@ -323,7 +360,6 @@ public class EnemyAI : MonoBehaviour
         {
             hasDetourChoice = false;
             detourStuckTimer = 0f;
-            stuckUnderHangSince = -1f;
         }
 
         if (platformJumpRequireHorizontalStandoff && dyPlayer > playerAboveMinHeight &&
@@ -347,8 +383,6 @@ public class EnemyAI : MonoBehaviour
 
         lastJumpWasStraightUnder = false;
         bool didPlatformJump = TryPlatformJumpTowardPlayer(dyPlayer, distanceToLandingX, climbIntent, straightUnderGeometryOk);
-        if (didPlatformJump)
-            stuckUnderHangSince = -1f;
         if (didPlatformJump && lastJumpWasStraightUnder)
             underJumpAirborneAssist = true;
         else if (groundSensor != null && groundSensor.State() && !didPlatformJump && rb.linearVelocity.y <= 0.12f)
@@ -366,7 +400,10 @@ public class EnemyAI : MonoBehaviour
 
         if (didPlatformJump)
         {
-            platformVerticalJumpUntil = Time.time + platformJumpVerticalHold;
+            float vHold = platformJumpVerticalHold;
+            if (lastPlatformJumpWasSideArc)
+                vHold = platformJumpVerticalHoldSide;
+            platformVerticalJumpUntil = Time.time + vHold;
             platformAirSteerUntil = Time.time + platformApproachAirDuration;
         }
         else if (groundedForMove)
@@ -379,6 +416,14 @@ public class EnemyAI : MonoBehaviour
                 float toGoal = landingGoalX - rb.position.x;
                 if (Mathf.Abs(toGoal) > 0.04f)
                     moveX = Mathf.Sign(toGoal) * underJumpHorizontalSpeed;
+                else
+                    moveX = 0f;
+            }
+            else if (lastPlatformJumpWasSideArc && target != null)
+            {
+                float toGoal = landingGoalX - rb.position.x;
+                if (Mathf.Abs(toGoal) > 0.04f)
+                    moveX = Mathf.Sign(toGoal) * sideJumpTakeoffHorizontalSpeed;
                 else
                     moveX = 0f;
             }
@@ -401,7 +446,14 @@ public class EnemyAI : MonoBehaviour
 
         float vy = rb.linearVelocity.y;
         if (didPlatformJump)
-            vy = jumpForce * (lastJumpWasStraightUnder ? underJumpForceMultiplier : 1f);
+        {
+            float vMul = 1f;
+            if (lastJumpWasStraightUnder)
+                vMul = underJumpForceMultiplier;
+            else if (lastPlatformJumpWasSideArc)
+                vMul = sideJumpVerticalMultiplier;
+            vy = jumpForce * vMul;
+        }
 
         float preCollisionMoveX = moveX;
         if (!groundedForMove && bodyCollider != null && Mathf.Abs(moveX) > 0.02f)
@@ -637,6 +689,66 @@ public class EnemyAI : MonoBehaviour
         return TryFindPlatformColliderUnderPlayer(out _);
     }
 
+    float GetEnemyFeetWorldY()
+    {
+        if (bodyCollider != null)
+            return bodyCollider.bounds.min.y;
+        return rb.position.y - 0.35f;
+    }
+
+    /// <summary>Игрок стоит на коллайдере-снаряжении под ногами, который реально выше пола врага (не общая земля).</summary>
+    bool PlayerOnElevatedPlatformForJump(out Collider2D platformCollider)
+    {
+        platformCollider = null;
+        if (target == null) return false;
+        if (!TryFindPlatformColliderUnderPlayer(out Collider2D plat))
+            return false;
+        float feetRef = target.position.y + underJumpTargetFeetYOffset;
+        float top = plat.bounds.max.y;
+        if (Mathf.Abs(feetRef - top) > playerFeetPlatformContactSlop)
+            return false;
+        if (top < GetEnemyFeetWorldY() + platformTopMinAboveEnemyFeet)
+            return false;
+        platformCollider = plat;
+        return true;
+    }
+
+    bool PlatformJumpPlayerSurfaceOk()
+    {
+        if (!platformJumpOnlyWhenPlayerOnElevatedSurface)
+            return true;
+        return PlayerOnElevatedPlatformForJump(out _);
+    }
+
+    bool EnemyBodyOverlapsPlatformX(Bounds platBounds, float slack)
+    {
+        float hw = GetEnemyColliderHalfWidth();
+        float el = rb.position.x - hw;
+        float er = rb.position.x + hw;
+        return er > platBounds.min.x + slack && el < platBounds.max.x - slack;
+    }
+
+    float ReachablePlatformEdgeStandX(float ex, Bounds platBounds, int signPrefer)
+    {
+        float pl = platBounds.min.x;
+        float pr = platBounds.max.x;
+        float pad = Mathf.Max(climbEdgeStandoffPad, GetEnemyColliderHalfWidth() + 0.16f);
+        float leftStand = pl - pad;
+        float rightStand = pr + pad;
+        float dL = Mathf.Abs(ex - leftStand);
+        float dR = Mathf.Abs(ex - rightStand);
+        bool leftCloser = dL < dR - 0.1f || (Mathf.Abs(dL - dR) <= 0.1f && signPrefer <= 0);
+        Vector2 tryDir = leftCloser ? Vector2.left : Vector2.right;
+        if (IsSideBlocked(tryDir))
+        {
+            leftCloser = !leftCloser;
+            tryDir = leftCloser ? Vector2.left : Vector2.right;
+            if (IsSideBlocked(tryDir))
+                return leftCloser ? leftStand : rightStand;
+        }
+        return leftCloser ? leftStand : rightStand;
+    }
+
     bool IsHorizontallyUnderPlatformCollider()
     {
         if (!TryFindPlatformColliderUnderPlayer(out Collider2D plat)) return false;
@@ -655,9 +767,20 @@ public class EnemyAI : MonoBehaviour
         return IsHorizontallyUnderPlatformCollider();
     }
 
+    float EffectiveUnderPlayerJumpMaxX()
+    {
+        if (!TryFindPlatformColliderUnderPlayer(out Collider2D plat))
+            return underPlayerJumpMaxX;
+        if (plat.bounds.size.x > narrowClimbPlatformWidth)
+            return underPlayerJumpMaxX;
+        return Mathf.Max(
+            underPlayerJumpMaxX,
+            plat.bounds.extents.x + GetEnemyColliderHalfWidth() + narrowPlatUnderJumpExtraX);
+    }
+
     bool StraightUnderJumpGeometryOk(float dyPlayer, float distanceToAimX, float aimWorldX)
     {
-        if (distanceToAimX > underPlayerJumpMaxX) return false;
+        if (distanceToAimX > EffectiveUnderPlayerJumpMaxX()) return false;
         if (dyPlayer < underJumpMinDy || dyPlayer > underJumpMaxDy) return false;
         return HasJumpableLedgeUnderTarget(aimWorldX) || HasFeetOverlapPlatformForJump();
     }
@@ -766,10 +889,13 @@ public class EnemyAI : MonoBehaviour
 
     bool TryPlatformJumpTowardPlayer(float dyPlayer, float distanceX, bool climbIntent, bool straightUnderGeometryOk)
     {
+        lastPlatformJumpWasSideArc = false;
         if (playerAboveSince < 0f) return false;
         if (Time.time < nextPlatformJumpTime) return false;
         if (Time.time < dodgeLockUntil) return false;
         if (dyPlayer <= playerAboveMinHeight) return false;
+        if (!PlatformJumpPlayerSurfaceOk())
+            return false;
 
         bool grounded = IsConsideredGroundedForJump();
         if (!grounded) return false;
@@ -781,8 +907,12 @@ public class EnemyAI : MonoBehaviour
 
         float persistRequired = playerAbovePersistSeconds;
         if (straightUnderGeometryOk &&
-            (distanceX <= underPlayerJumpMaxX || ComputeJumpStraightFromBelowFootprint(dyPlayer)))
+            (distanceX <= EffectiveUnderPlayerJumpMaxX() || ComputeJumpStraightFromBelowFootprint(dyPlayer)))
             persistRequired = Mathf.Min(persistRequired, underPlayerAlignedPersistSeconds);
+
+        bool relaxedHigh = dyPlayer >= playerAboveMinHeight + relaxedHighJumpExtraDy;
+        if (relaxedHigh)
+            persistRequired = Mathf.Min(persistRequired, relaxedHighJumpMinPersistSeconds);
 
         if (Time.time - playerAboveSince < persistRequired)
             return false;
@@ -798,19 +928,39 @@ public class EnemyAI : MonoBehaviour
             return true;
         }
 
+        // Боковой/дуговой прыжок — только когда игрок реально «наверху» (climbIntent), иначе ложные прыжки на ровном месте.
+        if (!climbIntent)
+            return false;
+
         bool fromDetour = climbIntent && hasDetourChoice && ReachedDetourJumpSpot();
         float maxHoriz = fromDetour ? detourJumpMaxHorizontal : sideJumpMaxHorizontal;
+        if (climbIntent && !HasClearVerticalChannelToPlayer())
+            maxHoriz = Mathf.Max(maxHoriz, detourJumpMaxHorizontal);
+        float minHoriz = sideJumpMinHorizontal;
+        if (relaxedHigh)
+        {
+            if (!TryFindPlatformColliderUnderPlayer(out _))
+                return false;
+            minHoriz = Mathf.Min(minHoriz, relaxedHighJumpMinHorizontal);
+            maxHoriz = Mathf.Max(maxHoriz, relaxedHighJumpMaxHorizontal);
+        }
+
         bool almostUnderPlayerVertically = platformJumpAllowWhenVerticalPathBlocked &&
             dyPlayer > playerAboveMinHeight + 0.04f &&
-            distanceX <= sideJumpMinHorizontal + 0.02f;
-        if (!almostUnderPlayerVertically && (distanceX < sideJumpMinHorizontal || distanceX > maxHoriz))
+            distanceX <= minHoriz + 0.02f;
+        if (!almostUnderPlayerVertically && (distanceX < minHoriz || distanceX > maxHoriz))
             return false;
+
         bool verticalClear = HasClearVerticalChannelToPlayer();
+        bool overhang = PlatformOverhangBlocksPathToPlayer();
+        if (verticalClear && !overhang && dyPlayer < playerAboveMinHeight + sideJumpRequireExtraDyWhenOpen)
+            return false;
         if (!verticalClear &&
             !(platformJumpAllowWhenVerticalPathBlocked && dyPlayer > playerAboveMinHeight + 0.08f))
             return false;
         if (fromDetour && PlatformOverhangBlocksPathToPlayer()) return false;
 
+        lastPlatformJumpWasSideArc = true;
         nextPlatformJumpTime = Time.time + platformJumpCooldown;
         if (groundSensor != null)
             groundSensor.Disable(groundSensorJumpDisable);

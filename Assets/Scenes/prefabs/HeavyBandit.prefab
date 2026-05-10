@@ -336,10 +336,10 @@ MonoBehaviour:
   underJumpMaxDy: 5.5
   underPlayerAlignedPersistSeconds: 0.22
   underJumpTargetFeetYOffset: -0.42
-  underJumpForceMultiplier: 1.14
+  underJumpForceMultiplier: 1.22
   underJumpHorizontalSpeed: 2.65
   underJumpAirSteerMultiplier: 1.52
-  jumpForce: 11
+  jumpForce: 14
   platformJumpVerticalHold: 0.14
   platformApproachAirSpeed: 2.15
   platformApproachAirDuration: 0.42
@@ -361,7 +361,6 @@ MonoBehaviour:
   platformJumpAllowWhenVerticalPathBlocked: 1
   platformFeetOverlapWidth: 3.2
   platformFeetOverlapHeight: 0.55
-  platformUnderStuckDetourAfterSeconds: 0.75
 --- !u!114 &-7764881440689622182
 MonoBehaviour:
   m_ObjectHideFlags: 0
