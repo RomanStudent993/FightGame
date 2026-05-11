@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Щит по ПКМ: блокирует урон только если враг с той стороны, куда смотрит персонаж (SpriteRenderer.flipX как у HeroKnight).
-/// После случайного числа успешных блоков (2 или 3) следующий удар пробивает щит: отдача, усиленный урон, короткий локаут блока.
+/// После случайного числа успешных блоков (2 или 3) следующий удар пробивает щит: отдача и обычный урон врага, короткий локаут блока.
 /// </summary>
 public class PlayerShieldDefense : MonoBehaviour
 {
@@ -10,12 +10,15 @@ public class PlayerShieldDefense : MonoBehaviour
     public bool requireMouseHeld = true;
 
     [Header("Прорыв щита")]
-    [Tooltip("Множитель урона, когда враг «пробивает» щит после лимита блоков.")]
-    public float shieldBreakDamageMultiplier = 1.65f;
     [Tooltip("Сколько секунд после прорыва щит не блокирует (ПКМ можно держать — урон не гасится).")]
     public float postBreakBlockLockout = 0.85f;
 
+    [Header("Звук")]
+    [Tooltip("Воспроизводится в момент прорыва щита (после 2–3 блоков и толчка).")]
+    public AudioClip shieldBreakSound;
+
     SpriteRenderer spriteRenderer;
+    AudioSource audioSource;
     private int blocksSuccessfullyStopped;
     private int blocksAllowedBeforeBreak;
     private float blockLockoutUntil;
@@ -25,6 +28,7 @@ public class PlayerShieldDefense : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         if (spriteRenderer == null)
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        audioSource = GetComponent<AudioSource>();
     }
 
     void Start()
@@ -68,8 +72,8 @@ public class PlayerShieldDefense : MonoBehaviour
 
     /// <summary>
     /// Пытается погасить удар щитом. Возвращает true, если урон полностью заблокирован (damageToApply = 0).
-    /// Иначе false и damageToApply — сколько нанести (обычный или усиленный при прорыве щита).
-    /// brokeShieldThisHit — только что сработал прорыв щита (сильный удар); толчок задаёт EnemyContactDamage.
+    /// Иначе false и damageToApply — сколько нанести (при прорыве щита тот же базовый урон, что и у обычного удара врага).
+    /// brokeShieldThisHit — только что сработал прорыв щита; сильный толчок задаёт EnemyContactDamage.
     /// </summary>
     public bool AbsorbMeleeHitIfPossible(Vector2 attackerWorldPosition, int baseDamage, out int damageToApply, out bool brokeShieldThisHit)
     {
@@ -91,7 +95,17 @@ public class PlayerShieldDefense : MonoBehaviour
         RollBlocksBeforeBreak();
         blockLockoutUntil = Time.time + postBreakBlockLockout;
         brokeShieldThisHit = true;
-        damageToApply = Mathf.Max(1, Mathf.RoundToInt(baseDamage * shieldBreakDamageMultiplier));
+        damageToApply = Mathf.Max(1, baseDamage);
+        PlayShieldBreakSound();
         return false;
+    }
+
+    void PlayShieldBreakSound()
+    {
+        if (shieldBreakSound == null) return;
+        if (audioSource != null)
+            audioSource.PlayOneShot(shieldBreakSound);
+        else
+            AudioSource.PlayClipAtPoint(shieldBreakSound, transform.position);
     }
 }

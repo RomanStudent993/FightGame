@@ -69,8 +69,6 @@ public class DamagePopup : MonoBehaviour
         if (_cachedFont != null) return _cachedFont;
         _cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (_cachedFont == null)
-            _cachedFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        if (_cachedFont == null)
         {
             try
             {

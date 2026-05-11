@@ -1,8 +1,11 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
 public class SimpleHealth : MonoBehaviour
 {
+    /// <summary>Вызывается один раз при смерти этого объекта (после установки isDead).</summary>
+    public static event Action<GameObject> Died;
     public int maxHp = 5;
     [Tooltip("Раньше использовалось для Destroy; труп остаётся в сцене до выхода из игры.")]
     public float destroyDelay = 0.35f;
@@ -45,6 +48,8 @@ public class SimpleHealth : MonoBehaviour
     }
 
     public bool IsDead => isDead;
+    public int CurrentHp => Mathf.Max(0, currentHp);
+    public int MaxHp => maxHp;
 
     /// <returns>true если HP реально изменилось (урон принят)</returns>
     public bool TakeDamage(int damage)
@@ -69,6 +74,7 @@ public class SimpleHealth : MonoBehaviour
             ClearNonDeathTriggers(animator);
             animator.SetTrigger("Death");
         }
+        Died?.Invoke(gameObject);
         EnterDeathStasis();
         return true;
     }
@@ -137,6 +143,8 @@ public class SimpleHealth : MonoBehaviour
             if (c is Collider2D) continue;
             if (c is Rigidbody2D) continue;
             if (c is Joint2D) continue;
+            if (c is PlayerHealthBarHud)
+                continue;
             if (c is Behaviour be)
                 be.enabled = false;
         }
