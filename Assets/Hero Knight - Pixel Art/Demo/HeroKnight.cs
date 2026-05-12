@@ -12,11 +12,18 @@ public class HeroKnight : MonoBehaviour {
     [SerializeField] float      m_airWallCastDistance = 0.22f;
     [SerializeField] float      m_airStuckFallAssist = -3.5f;
     [SerializeField] float      m_airStuckTime = 0.06f;
+    [SerializeField] int        m_healAmount = 65;
+    [Tooltip("Сдвиг только графики вверх во время Heal (юниты мира). Коллайдер и Rigidbody не двигаются.")]
+    [SerializeField] float      m_healVisualWorldOffsetY = 0.1f;
 
     private Animator            m_animator;
     private Rigidbody2D         m_body2d;
     private Collider2D          m_bodyCollider;
-    private SpriteRenderer      m_spriteRenderer;
+    /// <summary>Корневой SR: сюда пишет Animator (не рисуется).</summary>
+    private SpriteRenderer      m_spriteDrive;
+    /// <summary>Дочерний SR: копия спрайта, видимый; сдвигается по Y только в Heal.</summary>
+    private SpriteRenderer      m_spriteVisual;
+    private Transform           m_spriteVisualTransform;
     private Sensor_HeroKnight   m_groundSensor;
     private bool                m_grounded = false;
     private bool                m_rolling = false;
@@ -27,6 +34,9 @@ public class HeroKnight : MonoBehaviour {
     private float               m_rollDuration = 8.0f / 14.0f;
     private float               m_rollCurrentTime;
     private PlayerCombatKnockback m_hitKnockback;
+    private SimpleHealth          m_health;
+    private int                   m_healQueue;
+    private bool                  m_healProcessorRunning;
     private float                 m_airBlockedHorizTimer;
     private float                 m_inputX;
     private readonly RaycastHit2D[] m_castHits = new RaycastHit2D[12];
@@ -38,8 +48,10 @@ public class HeroKnight : MonoBehaviour {
         m_animator = GetComponent<Animator>();
         m_body2d = GetComponent<Rigidbody2D>();
         m_bodyCollider = GetComponent<Collider2D>();
-        m_spriteRenderer = GetComponent<SpriteRenderer>();
+        m_spriteDrive = GetComponent<SpriteRenderer>();
+        SetupSpriteVisualCopy();
         m_hitKnockback = GetComponent<PlayerCombatKnockback>();
+        m_health = GetComponent<SimpleHealth>();
         m_groundSensor = transform.Find("GroundSensor").GetComponent<Sensor_HeroKnight>();
         m_animator.SetBool("WallSlide", false);
         m_body2d.sleepMode = RigidbodySleepMode2D.NeverSleep;
@@ -74,12 +86,12 @@ public class HeroKnight : MonoBehaviour {
 
         if (m_inputX > 0)
         {
-            if (m_spriteRenderer != null) m_spriteRenderer.flipX = false;
+            if (m_spriteDrive != null) m_spriteDrive.flipX = false;
             m_facingDirection = 1;
         }
         else if (m_inputX < 0)
         {
-            if (m_spriteRenderer != null) m_spriteRenderer.flipX = true;
+            if (m_spriteDrive != null) m_spriteDrive.flipX = true;
             m_facingDirection = -1;
         }
 
@@ -91,8 +103,15 @@ public class HeroKnight : MonoBehaviour {
             m_animator.SetBool("noBlood", m_noBlood);
             m_animator.SetTrigger("Death");
         }
-        else if (Input.GetKeyDown("q") && !m_rolling)
-            m_animator.SetTrigger("Hurt");
+        else if (Input.GetKeyDown(KeyCode.Q))
+        {
+            if (m_health != null && !m_health.IsDead)
+            {
+                m_healQueue++;
+                if (!m_healProcessorRunning)
+                    StartCoroutine(ProcessHealQueue());
+            }
+        }
         else if(Input.GetMouseButtonDown(0) && m_timeSinceAttack > 0.25f && !m_rolling)
         {
             m_currentAttack++;
@@ -193,8 +212,8 @@ public class HeroKnight : MonoBehaviour {
     /// <summary>Горизонтальное направление «взгляда» персонажа: +1 вправо, −1 влево (как у PlayerShieldDefense).</summary>
     int FacingSignFromSprite()
     {
-        if (m_spriteRenderer != null)
-            return m_spriteRenderer.flipX ? -1 : 1;
+        if (m_spriteDrive != null)
+            return m_spriteDrive.flipX ? -1 : 1;
         return m_facingDirection;
     }
 
@@ -216,6 +235,105 @@ public class HeroKnight : MonoBehaviour {
         Transform c = root.Find(childName);
         if (c != null)
             c.gameObject.SetActive(false);
+    }
+
+    void SetupSpriteVisualCopy()
+    {
+        if (m_spriteDrive == null) return;
+
+        GameObject visGo = new GameObject("SpriteDraw");
+        visGo.transform.SetParent(transform, false);
+        visGo.transform.localPosition = Vector3.zero;
+        visGo.transform.localRotation = Quaternion.identity;
+        visGo.transform.localScale = Vector3.one;
+        m_spriteVisualTransform = visGo.transform;
+        m_spriteVisual = visGo.AddComponent<SpriteRenderer>();
+        m_spriteVisual.sharedMaterial = m_spriteDrive.sharedMaterial;
+        m_spriteVisual.sortingLayerID = m_spriteDrive.sortingLayerID;
+        m_spriteVisual.sortingOrder = m_spriteDrive.sortingOrder;
+        m_spriteVisual.maskInteraction = m_spriteDrive.maskInteraction;
+        m_spriteVisual.spriteSortPoint = m_spriteDrive.spriteSortPoint;
+        m_spriteVisual.drawMode = m_spriteDrive.drawMode;
+        m_spriteVisual.size = m_spriteDrive.size;
+        m_spriteVisual.color = m_spriteDrive.color;
+        m_spriteVisual.sprite = m_spriteDrive.sprite;
+        m_spriteVisual.flipX = m_spriteDrive.flipX;
+        m_spriteDrive.forceRenderingOff = true;
+    }
+
+    void LateUpdate()
+    {
+        if (m_spriteDrive == null || m_spriteVisual == null) return;
+
+        m_spriteVisual.sprite = m_spriteDrive.sprite;
+        m_spriteVisual.flipX = m_spriteDrive.flipX;
+        m_spriteVisual.color = m_spriteDrive.color;
+        m_spriteVisual.drawMode = m_spriteDrive.drawMode;
+        m_spriteVisual.size = m_spriteDrive.size;
+
+        float y = 0f;
+        if (m_animator != null)
+        {
+            AnimatorStateInfo s = m_animator.GetCurrentAnimatorStateInfo(0);
+            if (s.IsName("Heal"))
+                y = m_healVisualWorldOffsetY;
+        }
+
+        m_spriteVisualTransform.localPosition = new Vector3(0f, y, 0f);
+    }
+
+    IEnumerator ProcessHealQueue()
+    {
+        m_healProcessorRunning = true;
+        while (m_healQueue > 0)
+        {
+            if (m_health == null || m_health.IsDead)
+            {
+                m_healQueue = 0;
+                break;
+            }
+
+            while (m_rolling)
+                yield return null;
+
+            m_healQueue--;
+            yield return CoHealOne();
+        }
+
+        m_healProcessorRunning = false;
+    }
+
+    IEnumerator CoHealOne()
+    {
+        m_animator.ResetTrigger("Heal");
+        m_animator.SetTrigger("Heal");
+        yield return null;
+
+        const float timeout = 20f;
+        float elapsed = 0f;
+        bool sawHeal = false;
+
+        while (elapsed < timeout)
+        {
+            if (m_health == null || m_health.IsDead)
+                break;
+
+            AnimatorStateInfo s = m_animator.GetCurrentAnimatorStateInfo(0);
+            if (s.IsName("Heal"))
+            {
+                sawHeal = true;
+                if (s.normalizedTime >= 0.99f)
+                    break;
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (sawHeal && m_health != null && !m_health.IsDead)
+            m_health.RestoreHp(m_healAmount);
+
+        m_animator.ResetTrigger("Heal");
     }
 
     void AE_SlideDust()

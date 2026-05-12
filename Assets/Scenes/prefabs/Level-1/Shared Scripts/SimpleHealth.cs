@@ -51,6 +51,13 @@ public class SimpleHealth : MonoBehaviour
     public int CurrentHp => Mathf.Max(0, currentHp);
     public int MaxHp => maxHp;
 
+    /// <summary>Добавляет HP, не выше maxHp. Не действует на мёртвого.</summary>
+    public void RestoreHp(int amount)
+    {
+        if (isDead || amount <= 0) return;
+        currentHp = Mathf.Min(maxHp, currentHp + amount);
+    }
+
     /// <returns>true если HP реально изменилось (урон принят)</returns>
     public bool TakeDamage(int damage)
     {
