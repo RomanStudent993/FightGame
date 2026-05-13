@@ -292,11 +292,12 @@ public class HeroKnight : MonoBehaviour {
                     float tInClip = phase * s.length;
                     float w0 = Mathf.Min(healSecondFrameWindowStart, healSecondFrameWindowEnd);
                     float w1 = Mathf.Max(healSecondFrameWindowStart, healSecondFrameWindowEnd);
+                    float face = (m_spriteDrive != null && m_spriteDrive.flipX) ? -1f : 1f;
                     // Сначала окно 2-го кадра, иначе «первая фаза» до max(настройка, w0) — без разрыва на 0 между ~0.14 с и w0.
                     if (tInClip >= w0 && tInClip < w1)
-                        x = healSecondFrameOffsetX;
+                        x = healSecondFrameOffsetX * face;
                     else if (tInClip < Mathf.Max(healFirstFrameOffsetSeconds, w0))
-                        x = healFirstFrameOffsetX;
+                        x = healFirstFrameOffsetX * face;
                 }
             }
         }
