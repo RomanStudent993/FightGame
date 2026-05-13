@@ -12,10 +12,10 @@ public class HeroKnight : MonoBehaviour {
     [SerializeField] float      m_airStuckFallAssist = -3.5f;
     [SerializeField] float      m_airStuckTime = 0.06f;
     [SerializeField] int        m_healAmount = 65;
-    [Tooltip("Сдвиг только графики вверх во время Heal (юниты мира). Коллайдер и Rigidbody не двигаются.")]
-    [SerializeField] float      m_healVisualWorldOffsetY = 0.1f;
     [Tooltip("Размер только картинки в анимации Heal (меньше 1 — мельче, как у idle).")]
     [SerializeField] float healVisualScale = 0.72f;
+    [Tooltip("Сдвиг копии спрайта по Y на всём Heal (положительное — чуть вверх; при scale < 1 часто «оседает» вниз без этого).")]
+    [SerializeField] float healVisualOffsetY = 0.04f;
     [Header("Heal — сдвиг по X")]
     [Tooltip("Сдвиг в самом начале клипа Heal (отрицательное — влево).")]
     [SerializeField] float healFirstFrameOffsetX = -0.045f;
@@ -33,7 +33,7 @@ public class HeroKnight : MonoBehaviour {
     private Collider2D          m_bodyCollider;
     /// <summary>Корневой SR: сюда пишет Animator (не рисуется).</summary>
     private SpriteRenderer      m_spriteDrive;
-    /// <summary>Дочерний SR: копия спрайта, видимый; сдвигается по Y только в Heal.</summary>
+    /// <summary>Дочерний SR: копия спрайта, видимый; в Heal — масштаб и сдвиг по X из LateUpdate.</summary>
     private SpriteRenderer      m_spriteVisual;
     private Transform           m_spriteVisualTransform;
     private Sensor_HeroKnight   m_groundSensor;
@@ -284,7 +284,7 @@ public class HeroKnight : MonoBehaviour {
             AnimatorStateInfo s = m_animator.GetCurrentAnimatorStateInfo(0);
             if (s.IsName("Heal"))
             {
-                y = m_healVisualWorldOffsetY;
+                y = healVisualOffsetY;
                 sc = Mathf.Max(0.01f, healVisualScale);
                 if (s.length > 0.001f)
                 {

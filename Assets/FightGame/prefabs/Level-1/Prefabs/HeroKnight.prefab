@@ -549,7 +549,6 @@ MonoBehaviour:
   m_airStuckFallAssist: -3.5
   m_airStuckTime: 0.06
   m_healAmount: 65
-  m_healVisualWorldOffsetY: 0.1
   healVisualScale: 2
 --- !u!114 &-7533333769237589875
 MonoBehaviour:
