@@ -107,6 +107,7 @@ GameObject:
   - component: {fileID: -3435615690153081442}
   - component: {fileID: -7764881440689622182}
   - component: {fileID: 5132660866212273931}
+  - component: {fileID: 8726530920001140042}
   m_Layer: 0
   m_Name: HeavyBandit
   m_TagString: Enemy
@@ -403,3 +404,44 @@ MonoBehaviour:
   maxHp: 250
   destroyDelay: 0.35
   spawnInvulnerability: 0.75
+--- !u!114 &8726530920001140042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 701311879569352503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8a3c7e91f204b5a9e6d2c8b4a1f0e3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChandelierAI
+  player: {fileID: 0}
+  playerBody: {fileID: 0}
+  groundCheck: {fileID: 7066790399722715677}
+  animator: {fileID: 1785025197973476487}
+  groundSensor: {fileID: 1051958260647565447}
+  playerBelowStartDy: -0.12
+  descendRunSpeed: 3.45
+  descendVerticalAlignSlack: 0.16
+  descendRayLength: 4.5
+  descendAirSteerSpeed: 2.1
+  descendAirSteerMinDx: 0.05
+  playerHigherThanBotBy: 0.55
+  maxHorizontalToJump: 3.25
+  jumpVerticalSpeed: 15
+  jumpHorizontalPush: 2.85
+  jumpCooldown: 0.42
+  groundSensorJumpDisable: 0.18
+  runSpeed: 3.6
+  assistMinHorizontalDistance: 0.22
+  assistRunSpeed: 3.35
+  assistStallVelocityX: 0.28
+  assistOnlyWhenGrounded: 1
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  groundCheckRadius: 0.18
+  groundCheckOffset: {x: 0, y: -0.42}
+  flipByNegativeScaleX: 1
+  fallbackScaleX: 1

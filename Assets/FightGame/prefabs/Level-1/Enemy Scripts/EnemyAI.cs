@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>Преследование игрока, щит, прыжки на платформу к цели. Общий патруль по лучам без боя — <see cref="EnemyPlatformMovementAI"/>.</summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class EnemyAI : MonoBehaviour
 {
