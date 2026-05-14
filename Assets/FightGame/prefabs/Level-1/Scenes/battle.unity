@@ -221,7 +221,7 @@ GameObject:
   - component: {fileID: 108705071}
   - component: {fileID: 108705072}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (1)
+  m_Name: chain 3.4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -312,7 +312,7 @@ GameObject:
   - component: {fileID: 121046335}
   - component: {fileID: 121046336}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0
+  m_Name: chain 4.1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -541,7 +541,7 @@ GameObject:
   - component: {fileID: 218953478}
   - component: {fileID: 218953479}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (5)
+  m_Name: chain 2.3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -632,7 +632,7 @@ GameObject:
   - component: {fileID: 229008936}
   - component: {fileID: 229008937}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (3)
+  m_Name: chain 2.1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -723,7 +723,7 @@ GameObject:
   - component: {fileID: 252607128}
   - component: {fileID: 252607129}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0
+  m_Name: 4.3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -814,7 +814,7 @@ GameObject:
   - component: {fileID: 502530895}
   - component: {fileID: 502530896}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0
+  m_Name: chain 3.3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -938,7 +938,7 @@ GameObject:
   - component: {fileID: 584444732}
   - component: {fileID: 584444733}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (1)
+  m_Name: chain 3.2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1167,7 +1167,7 @@ GameObject:
   - component: {fileID: 647569961}
   - component: {fileID: 647569962}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (2)
+  m_Name: chain 1.3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1259,7 +1259,7 @@ GameObject:
   - component: {fileID: 719792338}
   - component: {fileID: 719792337}
   m_Layer: 0
-  m_Name: platforma 1 (2)
+  m_Name: platforma 4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1569,7 +1569,7 @@ GameObject:
   - component: {fileID: 961183035}
   - component: {fileID: 961183036}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (2)
+  m_Name: chain 1.6
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1661,7 +1661,7 @@ GameObject:
   - component: {fileID: 977794918}
   - component: {fileID: 977794917}
   m_Layer: 0
-  m_Name: platforma 1 (3)
+  m_Name: platforma 2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1835,7 +1835,7 @@ GameObject:
   - component: {fileID: 1032261876}
   - component: {fileID: 1032261877}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0
+  m_Name: chain 3.1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1926,7 +1926,7 @@ GameObject:
   - component: {fileID: 1045985738}
   - component: {fileID: 1045985739}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (1)
+  m_Name: 4.4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2017,7 +2017,7 @@ GameObject:
   - component: {fileID: 1066681917}
   - component: {fileID: 1066681918}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0
+  m_Name: chain 1.1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2115,11 +2115,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 425655578902629259, guid: 070b11c7f31e52240b9f202591bff766, type: 3}
       propertyPath: healFirstFrameOffsetX
-      value: -0.4
+      value: -0.35
       objectReference: {fileID: 0}
     - target: {fileID: 425655578902629259, guid: 070b11c7f31e52240b9f202591bff766, type: 3}
       propertyPath: healSecondFrameOffsetX
-      value: -0.4
+      value: -0.35
       objectReference: {fileID: 0}
     - target: {fileID: 2950576145006604312, guid: 070b11c7f31e52240b9f202591bff766, type: 3}
       propertyPath: m_SortingOrder
@@ -2218,28 +2218,10 @@ Transform:
   m_Children:
   - {fileID: 623627205}
   - {fileID: 977794916}
-  - {fileID: 719792336}
   - {fileID: 1468149391}
+  - {fileID: 719792336}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3847291054
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1115715586}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c3e2d1b4a59687766554433221100ab, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ChainPlatformWeightSway
-  platformsRoot: {fileID: 1115715587}
-  chainsRoot: {fileID: 925383832}
-  dipLocalY: -0.075
-  smoothTime: 0.14
-  overlapProbeHeight: 0.14
-  overlapWidthMultiplier: 0.88
 --- !u!1 &1245988601
 GameObject:
   m_ObjectHideFlags: 0
@@ -2466,7 +2448,7 @@ GameObject:
   - component: {fileID: 1280321645}
   - component: {fileID: 1280321646}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (1)
+  m_Name: chain 1.2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2557,7 +2539,7 @@ GameObject:
   - component: {fileID: 1398051158}
   - component: {fileID: 1398051159}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (8)
+  m_Name: chain 2.6
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2685,7 +2667,7 @@ GameObject:
   - component: {fileID: 1427817622}
   - component: {fileID: 1427817623}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0
+  m_Name: chain 1.4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2777,7 +2759,7 @@ GameObject:
   - component: {fileID: 1468149393}
   - component: {fileID: 1468149392}
   m_Layer: 0
-  m_Name: platforma 1 (1)
+  m_Name: platforma 3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2914,7 +2896,7 @@ GameObject:
   - component: {fileID: 1532016519}
   - component: {fileID: 1532016520}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (6)
+  m_Name: chain 2.4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3143,7 +3125,7 @@ GameObject:
   - component: {fileID: 1582642232}
   - component: {fileID: 1582642233}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (7)
+  m_Name: chain 2.5
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3234,7 +3216,7 @@ GameObject:
   - component: {fileID: 1798504587}
   - component: {fileID: 1798504588}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (1)
+  m_Name: chain 1.5
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3360,7 +3342,7 @@ GameObject:
   - component: {fileID: 1905087261}
   - component: {fileID: 1905087262}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (1)
+  m_Name: 4.2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3451,7 +3433,7 @@ GameObject:
   - component: {fileID: 2057638345}
   - component: {fileID: 2057638346}
   m_Layer: 0
-  m_Name: photo_2026-05-10_15-10-19-Photoroom_0 (4)
+  m_Name: chain 2.2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3704,6 +3686,26 @@ Transform:
   - {fileID: 1045985738}
   m_Father: {fileID: 925383832}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3847291054
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1115715586}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c3e2d1b4a59687766554433221100ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChainPlatformWeightSway
+  platformsRoot: {fileID: 1115715587}
+  chainsRoot: {fileID: 925383832}
+  platformSlots: []
+  chainSlots: []
+  dipLocalY: -0.075
+  smoothTime: 0.14
+  overlapProbeHeight: 0.14
+  overlapWidthMultiplier: 0.88
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

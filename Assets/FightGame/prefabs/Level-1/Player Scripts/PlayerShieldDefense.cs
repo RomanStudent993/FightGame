@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Щит по ПКМ: блокирует урон только если враг с той стороны, куда смотрит персонаж (SpriteRenderer.flipX как у HeroKnight).
-/// После случайного числа успешных блоков (2 или 3) следующий удар пробивает щит: отдача и обычный урон врага, короткий локаут блока.
+/// После случайного числа успешных блоков (2 или 3) следующий удар пробивает щит: отдача, фиксированный урон <see cref="shieldBreakHpLoss"/> и звук прорыва, короткий локаут блока.
 /// </summary>
 public class PlayerShieldDefense : MonoBehaviour
 {
@@ -12,10 +12,15 @@ public class PlayerShieldDefense : MonoBehaviour
     [Header("Прорыв щита")]
     [Tooltip("Сколько секунд после прорыва щит не блокирует (ПКМ можно держать — урон не гасится).")]
     public float postBreakBlockLockout = 0.85f;
+    [Tooltip("HP при пробитии щита (удар после 2–3 успешных блоков).")]
+    public int shieldBreakHpLoss = 40;
 
     [Header("Звук")]
     [Tooltip("Воспроизводится в момент прорыва щита (после 2–3 блоков и толчка).")]
     public AudioClip shieldBreakSound;
+    [Tooltip("Громкость звука прорыва щита (0–1).")]
+    [Range(0f, 1f)]
+    public float shieldBreakSoundVolume = 0.9f;
 
     SpriteRenderer spriteRenderer;
     AudioSource audioSource;
@@ -72,7 +77,7 @@ public class PlayerShieldDefense : MonoBehaviour
 
     /// <summary>
     /// Пытается погасить удар щитом. Возвращает true, если урон полностью заблокирован (damageToApply = 0).
-    /// Иначе false и damageToApply — сколько нанести (при прорыве щита тот же базовый урон, что и у обычного удара врага).
+    /// Иначе false и damageToApply — сколько нанести (при прорыве щита — <see cref="shieldBreakHpLoss"/>).
     /// brokeShieldThisHit — только что сработал прорыв щита; сильный толчок задаёт EnemyContactDamage.
     /// </summary>
     public bool AbsorbMeleeHitIfPossible(Vector2 attackerWorldPosition, int baseDamage, out int damageToApply, out bool brokeShieldThisHit)
@@ -95,7 +100,7 @@ public class PlayerShieldDefense : MonoBehaviour
         RollBlocksBeforeBreak();
         blockLockoutUntil = Time.time + postBreakBlockLockout;
         brokeShieldThisHit = true;
-        damageToApply = Mathf.Max(1, baseDamage);
+        damageToApply = Mathf.Max(1, shieldBreakHpLoss);
         PlayShieldBreakSound();
         return false;
     }
@@ -104,8 +109,8 @@ public class PlayerShieldDefense : MonoBehaviour
     {
         if (shieldBreakSound == null) return;
         if (audioSource != null)
-            audioSource.PlayOneShot(shieldBreakSound);
+            audioSource.PlayOneShot(shieldBreakSound, shieldBreakSoundVolume);
         else
-            AudioSource.PlayClipAtPoint(shieldBreakSound, transform.position);
+            AudioSource.PlayClipAtPoint(shieldBreakSound, transform.position, shieldBreakSoundVolume);
     }
 }

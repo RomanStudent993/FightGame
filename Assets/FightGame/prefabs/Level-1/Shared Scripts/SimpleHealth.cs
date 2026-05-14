@@ -19,24 +19,32 @@ public class SimpleHealth : MonoBehaviour
     private static AudioClip _deathClipCached;
     private static AudioClip _damageClipCached;
 
-    static void PlayDamageSound()
+    [Header("Звук")]
+    [Tooltip("Громкость sound_damage (0–1).")]
+    [Range(0f, 1f)]
+    [SerializeField] float damageSoundVolume = 0.38f;
+    [Tooltip("Громкость sound_death (0–1).")]
+    [Range(0f, 1f)]
+    [SerializeField] float deathSoundVolume = 0.55f;
+
+    void PlayDamageSound()
     {
         if (_damageClipCached == null)
             _damageClipCached = Resources.Load<AudioClip>("Sounds/sound_damage");
         if (_damageClipCached == null) return;
         Vector3 p = Vector3.zero;
         if (Camera.main != null) p = Camera.main.transform.position;
-        AudioSource.PlayClipAtPoint(_damageClipCached, p);
+        AudioSource.PlayClipAtPoint(_damageClipCached, p, damageSoundVolume);
     }
 
-    static void PlayDeathSound()
+    void PlayDeathSound()
     {
         if (_deathClipCached == null)
             _deathClipCached = Resources.Load<AudioClip>("Sounds/sound_death");
         if (_deathClipCached == null) return;
         Vector3 p = Vector3.zero;
         if (Camera.main != null) p = Camera.main.transform.position;
-        AudioSource.PlayClipAtPoint(_deathClipCached, p);
+        AudioSource.PlayClipAtPoint(_deathClipCached, p, deathSoundVolume);
     }
 
     void Awake()
@@ -59,13 +67,15 @@ public class SimpleHealth : MonoBehaviour
     }
 
     /// <returns>true если HP реально изменилось (урон принят)</returns>
-    public bool TakeDamage(int damage)
+    /// <param name="playDamageSound">false — без sound_damage (например при пробитии щита, где уже звук крита).</param>
+    public bool TakeDamage(int damage, bool playDamageSound = true)
     {
         if (isDead || damage <= 0) return false;
         if (Time.time < invulnerableUntil) return false;
 
         currentHp -= damage;
-        PlayDamageSound();
+        if (playDamageSound)
+            PlayDamageSound();
         SpawnDamagePopup(damage);
 
         if (currentHp > 0)

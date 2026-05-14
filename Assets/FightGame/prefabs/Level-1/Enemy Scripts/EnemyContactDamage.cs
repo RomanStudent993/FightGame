@@ -40,14 +40,19 @@ public class EnemyContactDamage : MonoBehaviour
 
     private static AudioClip _shieldBlockClipCached;
 
-    static void PlayShieldBlockSound()
+    [Header("Звук")]
+    [Tooltip("Громкость отбоя щита (sound_shield), 0–1.")]
+    [Range(0f, 1f)]
+    public float shieldBlockSoundVolume = 0.4f;
+
+    void PlayShieldBlockSound()
     {
         if (_shieldBlockClipCached == null)
             _shieldBlockClipCached = Resources.Load<AudioClip>("Sounds/sound_shield");
         if (_shieldBlockClipCached == null) return;
         Vector3 p = Vector3.zero;
         if (Camera.main != null) p = Camera.main.transform.position;
-        AudioSource.PlayClipAtPoint(_shieldBlockClipCached, p);
+        AudioSource.PlayClipAtPoint(_shieldBlockClipCached, p, shieldBlockSoundVolume);
     }
 
     void Awake()
@@ -195,7 +200,8 @@ public class EnemyContactDamage : MonoBehaviour
                 float lockDur = brokeShield ? shieldBreakKnockbackInputLockDuration : knockbackInputLockDuration;
                 float slide = brokeShield ? shieldBreakKnockbackSlideDistance : hitKnockbackSlideDistance;
                 ApplyKnockbackAwayFromSelf(playerRb, health.transform, kb, lockDur, slide);
-                health.TakeDamage(damageToApply);
+                // При пробитии щита уже играет shieldBreakSound; sound_damage не нужен.
+                health.TakeDamage(damageToApply, playDamageSound: !brokeShield);
                 RegisterEnemyHitSlowdown();
                 if (brokeShield)
                 {
