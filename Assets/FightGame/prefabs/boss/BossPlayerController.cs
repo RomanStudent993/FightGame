@@ -7,6 +7,8 @@ public class BossPlayerController : MonoBehaviour
 {
     [SerializeField] float moveSpeed = 4f;
     [SerializeField] float runAnimSpeed = 2f;
+    [SerializeField] float attackAnimSpeed = 1.5f;
+    [SerializeField] float deathAnimSpeed = 1.5f;
     [SerializeField] bool useADKeys = true;
     [SerializeField] bool flipByNegativeScaleX = true;
     [SerializeField] float groundSnapRayDistance = 3f;
@@ -15,6 +17,13 @@ public class BossPlayerController : MonoBehaviour
 
     static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
     static readonly int RunSpeedHash = Animator.StringToHash("RunSpeed");
+    static readonly int AttackSpeedHash = Animator.StringToHash("AttackSpeed");
+    static readonly int DeathSpeedHash = Animator.StringToHash("DeathSpeed");
+    static readonly int AttackStateHash = Animator.StringToHash("Attack");
+    static readonly int DeathStateHash = Animator.StringToHash("Death");
+    static readonly int IdleStateHash = Animator.StringToHash("Idle");
+    static readonly int RunStateHash = Animator.StringToHash("Run");
+    static readonly int BaseLayer = 0;
 
     Rigidbody2D _rb;
     Animator _animator;
@@ -25,6 +34,8 @@ public class BossPlayerController : MonoBehaviour
     float _inputX;
     bool _wasMoving;
     bool _runAnchorReady;
+    bool _deathAnchorReady;
+    bool _deathHold;
     float _anchorCenterX;
     float _anchorFeetY;
 
@@ -38,7 +49,7 @@ public class BossPlayerController : MonoBehaviour
         _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
 
         SetupVisualRenderer();
-        ApplyRunAnimSpeed();
+        ApplyAnimSpeeds();
     }
 
     void Start()
@@ -50,17 +61,27 @@ public class BossPlayerController : MonoBehaviour
 
     void OnValidate()
     {
-        ApplyRunAnimSpeed();
+        ApplyAnimSpeeds();
     }
 
-    void ApplyRunAnimSpeed()
+    void ApplyAnimSpeeds()
     {
-        if (_animator != null)
-            _animator.SetFloat(RunSpeedHash, Mathf.Max(0.1f, runAnimSpeed));
+        if (_animator == null)
+            return;
+
+        _animator.SetFloat(RunSpeedHash, Mathf.Max(0.1f, runAnimSpeed));
+        _animator.SetFloat(AttackSpeedHash, Mathf.Max(0.1f, attackAnimSpeed));
+        _animator.SetFloat(DeathSpeedHash, Mathf.Max(0.1f, deathAnimSpeed));
     }
 
     void FixedUpdate()
     {
+        if (IsPlayingAction())
+        {
+            _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+            return;
+        }
+
         _inputX = ReadHorizontalInput();
         bool moving = Mathf.Abs(_inputX) > 0.01f;
         _animator.SetBool(IsMovingHash, moving);
@@ -71,23 +92,120 @@ public class BossPlayerController : MonoBehaviour
 
     void Update()
     {
+        if (AttackPressedThisFrame() && !IsPlayingAction())
+            StartAttack();
+
+        if (DeathPressedThisFrame() && !IsPlayingAction())
+            StartDeath();
+
         ApplyFacing(_inputX);
     }
+
+    void StartAttack()
+    {
+        _animator.SetBool(IsMovingHash, false);
+        _animator.Play(AttackStateHash, BaseLayer, 0f);
+    }
+
+    void StartDeath()
+    {
+        _deathHold = false;
+        _deathAnchorReady = false;
+        _animator.SetBool(IsMovingHash, false);
+        CacheAnchorFromSprite(_animSprite.sprite);
+        _deathAnchorReady = true;
+        _animator.Play(DeathStateHash, BaseLayer, 0f);
+    }
+
+    bool AttackPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        var mouse = UnityEngine.InputSystem.Mouse.current;
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+            return true;
+#endif
+        return Input.GetMouseButtonDown(0) || Input.GetButtonDown("Fire1");
+    }
+
+    bool DeathPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        var keyboard = UnityEngine.InputSystem.Keyboard.current;
+        if (keyboard != null && keyboard.qKey.wasPressedThisFrame)
+            return true;
+#endif
+        return Input.GetKeyDown(KeyCode.Q);
+    }
+
+    bool IsPlayingAction() => IsAttacking() || IsDeathActive();
+
+    bool IsDeathActive() => _deathHold || IsInDeathState();
+
+    bool IsInDeathState()
+    {
+        if (_animator.IsInTransition(BaseLayer))
+        {
+            var next = _animator.GetNextAnimatorStateInfo(BaseLayer);
+            if (next.shortNameHash == DeathStateHash)
+                return true;
+        }
+
+        return _animator.GetCurrentAnimatorStateInfo(BaseLayer).shortNameHash == DeathStateHash;
+    }
+
+    bool IsInActionState(int stateHash, System.Action onFinished)
+    {
+        if (_animator.IsInTransition(BaseLayer))
+        {
+            var next = _animator.GetNextAnimatorStateInfo(BaseLayer);
+            if (next.shortNameHash == stateHash)
+                return true;
+
+            var current = _animator.GetCurrentAnimatorStateInfo(BaseLayer);
+            if (current.shortNameHash == stateHash)
+                return false;
+        }
+
+        var state = _animator.GetCurrentAnimatorStateInfo(BaseLayer);
+        if (state.shortNameHash != stateHash)
+            return false;
+
+        if (state.normalizedTime >= 0.99f)
+        {
+            onFinished();
+            return false;
+        }
+
+        return true;
+    }
+
+    bool IsAttacking() => IsInActionState(AttackStateHash, FinishAttack);
 
     void LateUpdate()
     {
         SyncVisibleSprite();
+        UpdateDeathHold();
 
         bool moving = _animator.GetBool(IsMovingHash);
         if (moving != _wasMoving)
         {
             _wasMoving = moving;
             _runAnchorReady = false;
-            if (!moving)
+            if (!moving && !IsDeathActive())
                 CacheAnchorFromSprite(_animSprite.sprite);
         }
 
-        if (stabilizeRunSprites && moving)
+        if (stabilizeRunSprites && IsDeathActive())
+        {
+            if (!_deathAnchorReady)
+            {
+                CacheAnchorFromSprite(_animSprite.sprite);
+                _deathAnchorReady = true;
+            }
+
+            StabilizeVisual();
+        }
+        else if (stabilizeRunSprites && moving && !IsAttacking())
         {
             if (!_runAnchorReady)
             {
@@ -101,6 +219,24 @@ public class BossPlayerController : MonoBehaviour
         {
             _visual.localPosition = Vector3.zero;
         }
+    }
+
+    void UpdateDeathHold()
+    {
+        if (IsInDeathState() && !_deathHold)
+        {
+            var state = _animator.GetCurrentAnimatorStateInfo(BaseLayer);
+            if (state.shortNameHash == DeathStateHash && state.normalizedTime >= 0.99f)
+                _deathHold = true;
+        }
+
+        if (!_deathHold)
+            return;
+
+        _animator.Play(DeathStateHash, BaseLayer, 0.999f);
+
+        if (Mathf.Abs(ReadHorizontalInput()) > 0.01f)
+            FinishDeath();
     }
 
     void SetupVisualRenderer()
@@ -153,6 +289,27 @@ public class BossPlayerController : MonoBehaviour
         float dx = _anchorCenterX - b.center.x;
         float dy = _anchorFeetY - b.min.y;
         _visual.localPosition = new Vector3(dx, dy, 0f);
+    }
+
+    void FinishAttack() => FinishAction();
+
+    void FinishDeath()
+    {
+        _deathHold = false;
+        _deathAnchorReady = false;
+        FinishAction();
+    }
+
+    void FinishAction()
+    {
+        float x = ReadHorizontalInput();
+        bool moving = Mathf.Abs(x) > 0.01f;
+        _animator.SetBool(IsMovingHash, moving);
+
+        if (moving)
+            _animator.Play(RunStateHash, BaseLayer, 0f);
+        else
+            _animator.Play(IdleStateHash, BaseLayer, 0f);
     }
 
     float ReadHorizontalInput()
