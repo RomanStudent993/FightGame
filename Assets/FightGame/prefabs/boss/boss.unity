@@ -770,7 +770,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossPlayerController
   moveSpeed: 4
-  runAnimSpeed: 2
+  runAnimSpeed: 1
   useADKeys: 1
   flipByNegativeScaleX: 1
   groundSnapRayDistance: 3
@@ -785,5 +785,5 @@ SceneRoots:
   - {fileID: 1645631792}
   - {fileID: 619394802}
   - {fileID: 1398911448}
-  - {fileID: 2121154768}
   - {fileID: 1525983652}
+  - {fileID: 2121154768}
