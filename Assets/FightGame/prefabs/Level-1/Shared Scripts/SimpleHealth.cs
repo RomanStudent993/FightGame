@@ -19,6 +19,9 @@ public class SimpleHealth : MonoBehaviour
     private static AudioClip _deathClipCached;
     private static AudioClip _damageClipCached;
 
+    [Header("UI")]
+    [SerializeField] bool showDamagePopup = true;
+
     [Header("Звук")]
     [Tooltip("Громкость sound_damage (0–1).")]
     [Range(0f, 1f)]
@@ -75,12 +78,19 @@ public class SimpleHealth : MonoBehaviour
 
         currentHp -= damage;
         if (playDamageSound)
-            PlayDamageSound();
+        {
+            ScarecrowHitReaction scarecrow = GetComponent<ScarecrowHitReaction>();
+            if (scarecrow != null)
+                scarecrow.PlayHitSound();
+            else
+                PlayDamageSound();
+        }
         SpawnDamagePopup(damage);
 
         if (currentHp > 0)
         {
-            if (animator != null) animator.SetTrigger("Hurt");
+            if (animator != null && animator.runtimeAnimatorController != null)
+                animator.SetTrigger("Hurt");
             return true;
         }
 
@@ -98,6 +108,8 @@ public class SimpleHealth : MonoBehaviour
 
     void SpawnDamagePopup(int damage)
     {
+        if (!showDamagePopup) return;
+
         Vector3 p = transform.position;
         Collider2D col = GetComponent<Collider2D>();
         if (col != null)

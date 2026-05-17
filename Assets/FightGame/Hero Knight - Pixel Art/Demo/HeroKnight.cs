@@ -70,8 +70,12 @@ public class HeroKnight : MonoBehaviour {
         SetupSpriteVisualCopy();
         m_hitKnockback = GetComponent<PlayerCombatKnockback>();
         m_health = GetComponent<SimpleHealth>();
-        m_groundSensor = transform.Find("GroundSensor").GetComponent<Sensor_HeroKnight>();
-        m_animator.SetBool("WallSlide", false);
+        Transform groundSensorTransform = transform.Find("GroundSensor");
+        if (groundSensorTransform != null)
+            m_groundSensor = groundSensorTransform.GetComponent<Sensor_HeroKnight>();
+
+        if (m_animator != null)
+            m_animator.SetBool("WallSlide", false);
         m_body2d.sleepMode = RigidbodySleepMode2D.NeverSleep;
         m_envContactFilter.useTriggers = false;
         m_envContactFilter.useLayerMask = true;
@@ -90,16 +94,19 @@ public class HeroKnight : MonoBehaviour {
         if(m_rollCurrentTime > m_rollDuration)
             m_rolling = false;
 
-        if (!m_grounded && m_groundSensor.State())
+        if (m_groundSensor != null)
         {
-            m_grounded = true;
-            m_animator.SetBool("Grounded", m_grounded);
-        }
+            if (!m_grounded && m_groundSensor.State())
+            {
+                m_grounded = true;
+                if (m_animator != null) m_animator.SetBool("Grounded", m_grounded);
+            }
 
-        if (m_grounded && !m_groundSensor.State())
-        {
-            m_grounded = false;
-            m_animator.SetBool("Grounded", m_grounded);
+            if (m_grounded && !m_groundSensor.State())
+            {
+                m_grounded = false;
+                if (m_animator != null) m_animator.SetBool("Grounded", m_grounded);
+            }
         }
 
         if (m_inputX > 0)
@@ -156,7 +163,8 @@ public class HeroKnight : MonoBehaviour {
             m_grounded = false;
             m_animator.SetBool("Grounded", m_grounded);
             m_body2d.linearVelocity = new Vector2(m_body2d.linearVelocity.x, m_jumpForce);
-            m_groundSensor.Disable(0.2f);
+            if (m_groundSensor != null)
+                m_groundSensor.Disable(0.2f);
         }
         else if (Mathf.Abs(m_inputX) > Mathf.Epsilon)
         {

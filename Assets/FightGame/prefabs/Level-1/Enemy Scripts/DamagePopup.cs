@@ -47,7 +47,9 @@ public class DamagePopup : MonoBehaviour
         text.color = new Color(0.95f, 0.15f, 0.12f, 1f);
         text.fontSize = 42;
         text.alignment = TextAnchor.MiddleCenter;
-        text.font = ResolveFont();
+        Font font = ResolveFont();
+        if (font != null)
+            text.font = font;
         text.fontStyle = FontStyle.Bold;
         text.raycastTarget = false;
 

@@ -341,8 +341,6 @@ GameObject:
   - component: {fileID: -7533333769237589875}
   - component: {fileID: -6774428842503154247}
   - component: {fileID: -8899776655443322111}
-  - component: {fileID: 8811223344556677881}
-  - component: {fileID: 8811223344556677882}
   - component: {fileID: -7766000000000000001}
   m_Layer: 0
   m_Name: HeroKnight
@@ -600,44 +598,6 @@ MonoBehaviour:
   requireMouseHeld: 1
   postBreakBlockLockout: 0.85
   shieldBreakSound: {fileID: 8300000, guid: f77988f3737d1354db77367424407d39, type: 3}
---- !u!114 &8811223344556677881
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7502976105708379083}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c8d9e0f1a2b34c56d7e8f90a1b2c3d4e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerHealthBarHud
-  anchorFromTopLeft: {x: 16, y: -16}
-  panelWidth: 240
-  barHeight: 18
-  spaceBetweenTextAndBar: 22
-  topTextPadding: 8
-  textBlockHeight: 28
-  barBottomMargin: 12
---- !u!114 &8811223344556677882
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7502976105708379083}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f6789012345678abcdefaa, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MissionObjectiveHud
-  anchorFromTopRight: {x: -16, y: -16}
-  panelSize: {x: 340, y: 88}
-  subtitleFontSize: 28
-  taskFontSize: 18
-  subtitleText: "\u041F\u0435\u0440\u0432\u0430\u044F \u043A\u0440\u043E\u0432\u044C"
-  taskBeforeKill: "\u0423\u0431\u0435\u0439\u0442\u0435 \u0432\u0440\u0430\u0433\u0430"
-  taskAfterKill: "\u041F\u043E\u043A\u0438\u043D\u044C\u0442\u0435 \u043F\u043E\u043C\u0435\u0449\u0435\u043D\u0438\u0435"
 --- !u!114 &-7766000000000000001
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &2121154764
+--- !u!1 &100001
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,26 +8,26 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2121154768}
-  - component: {fileID: 2121154767}
-  - component: {fileID: 2121154766}
-  - component: {fileID: 2121154769}
-  - component: {fileID: 2121154765}
-  - component: {fileID: 2121154770}
+  - component: {fileID: 100002}
+  - component: {fileID: 100003}
+  - component: {fileID: 100004}
+  - component: {fileID: 100005}
+  - component: {fileID: 100006}
+  - component: {fileID: 100007}
   m_Layer: 0
-  m_Name: Boss
-  m_TagString: Untagged
+  m_Name: Scarecrow
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &2121154768
+--- !u!4 &100002
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2121154764}
+  m_GameObject: {fileID: 100001}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -36,14 +36,14 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &2121154767
+--- !u!212 &100003
 SpriteRenderer:
   serializedVersion: 2
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2121154764}
+  m_GameObject: {fileID: 100001}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -83,29 +83,29 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 10
+  m_SortingOrder: 5
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 876589693921725337, guid: cfd41f8e4401f344ea63a4f80db34cc5, type: 3}
+  m_Sprite: {fileID: 7284691854038500133, guid: a97ebcf1fd1c21543b9e607c357f50e2, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 2.45, y: 1.58}
+  m_Size: {x: 4.18, y: 4.18}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 1
---- !u!95 &2121154766
+--- !u!95 &100004
 Animator:
   serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2121154764}
+  m_GameObject: {fileID: 100001}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: c8f5b2031e1a4f7b9c4d6e8f0a213456, type: 2}
+  m_Controller: {fileID: 9100000, guid: f1e2d3c4b5a6478890a1b2c3d4e5f003, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -117,40 +117,13 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!50 &2121154769
-Rigidbody2D:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2121154764}
-  m_BodyType: 0
-  m_Simulated: 1
-  m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_GravityScale: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_Interpolate: 1
-  m_SleepingMode: 1
-  m_CollisionDetection: 0
-  m_Constraints: 4
---- !u!61 &2121154765
+--- !u!61 &100005
 BoxCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2121154764}
+  m_GameObject: {fileID: 100001}
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
@@ -178,51 +151,47 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: -0.29055983, y: 0.78999996}
+  m_Offset: {x: 0, y: 1.35}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0}
-    oldSize: {x: 2.45, y: 1.58}
-    newSize: {x: 2.45, y: 1.58}
+    pivot: {x: 0.5, y: 0.15}
+    oldSize: {x: 4.18, y: 4.18}
+    newSize: {x: 4.18, y: 4.18}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1.4811195, y: 1.5}
+  m_Size: {x: 1.2, y: 2.6}
   m_EdgeRadius: 0
---- !u!114 &2121154770
+--- !u!114 &100006
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2121154764}
+  m_GameObject: {fileID: 100001}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f1e2d3c4b5a6978890a1b2c3d4e5f607, type: 3}
+  m_Script: {fileID: 11500000, guid: a23d8808aac85e442926726d92e0f9b3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BossPlayerController
-  moveSpeed: 4
-  runAnimSpeed: 1
-  attackAnimSpeed: 1.6
-  deathAnimSpeed: 1.5
-  jumpForce: 13
-  jumpAnimSpeed: 1
-  jumpImpulseFrame: 4
-  jumpClipStopTime: 0.7
-  jumpFrameStep: 0.1
-  jumpSprites:
-  - {fileID: 5668892671671508689, guid: e80c408fa8d367b4eb8b96c3041d28f8, type: 3}
-  - {fileID: -136024707905030981, guid: 0eadb5af1f628de449766f693814bc59, type: 3}
-  - {fileID: 6641259355466934279, guid: 7ec8f9c9a4081884197112095193a7d4, type: 3}
-  - {fileID: -5595367945915284240, guid: 2d0100396176f6b439116579fa3d3560, type: 3}
-  - {fileID: -4048258657262996471, guid: bca9819bdb022d9489cf32c35dfb93bb, type: 3}
-  - {fileID: -3801185862833492377, guid: 1a8bf2a8508509e42afb903826a90f3e, type: 3}
-  groundCheckDistance: 0.12
-  useADKeys: 1
-  flipByNegativeScaleX: 1
-  groundSnapRayDistance: 3
-  groundLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  stabilizeRunSprites: 1
+  m_EditorClassIdentifier: Assembly-CSharp::SimpleHealth
+  maxHp: 99999
+  destroyDelay: 0.35
+  spawnInvulnerability: 0
+  showDamagePopup: 0
+  damageSoundVolume: 0.38
+  deathSoundVolume: 0.55
+--- !u!114 &100007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8e7f6a5b4d3421098abcdef01234567, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ScarecrowHitReaction
+  hurtHoldSeconds: 0.28
+  hitSoundVolume: 2.5
