@@ -77,15 +77,25 @@ public class SimpleHealth : MonoBehaviour
         if (Time.time < invulnerableUntil) return false;
 
         currentHp -= damage;
+        ScarecrowHitReaction scarecrow = GetComponent<ScarecrowHitReaction>();
         if (playDamageSound)
         {
-            ScarecrowHitReaction scarecrow = GetComponent<ScarecrowHitReaction>();
             if (scarecrow != null)
                 scarecrow.PlayHitSound();
             else
                 PlayDamageSound();
         }
         SpawnDamagePopup(damage);
+
+        if (scarecrow != null)
+        {
+            if (scarecrow.RegisterHit())
+                return true;
+
+            if (animator != null && animator.runtimeAnimatorController != null)
+                animator.SetTrigger("Hurt");
+            return true;
+        }
 
         if (currentHp > 0)
         {

@@ -194,4 +194,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScarecrowHitReaction
   hurtHoldSeconds: 0.28
-  hitSoundVolume: 2.5
+  hitsToDefeat: 3
+  deathSprites:
+  - {fileID: 4647102719298672471, guid: 5ec04da2f25fe9748b044ebb9566cd4e, type: 3}
+  - {fileID: 6023094241941201601, guid: d8a702d250389ea4cb14efa386e0f5c9, type: 3}
+  - {fileID: -5265922415608756758, guid: 4ce68be0b80a2cf469bf59816e18df78, type: 3}
+  deathFrameSeconds: 0.3
+  deathScaleMultiplier: 1.08
+  hitClip: {fileID: 8300000, guid: 51aa083da70b0494a97172c00a1d062e, type: 3}
+  hitSoundVolume: 3
+  hitSoundPitch: 1.4
