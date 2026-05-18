@@ -70,7 +70,8 @@ public class PlayerHealthBarHud : MonoBehaviour
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f),
             new Vector2(0f, -topTextPadding), new Vector2(-8f, textBlockHeight));
         hpText = textRt.gameObject.AddComponent<Text>();
-        hpText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        hpText.font = GameFont.Default;
+        GameFont.RequestGlyphs("HP 999/999", 26, FontStyle.Bold);
         hpText.fontSize = 26;
         hpText.fontStyle = FontStyle.Bold;
         hpText.color = TextColor;

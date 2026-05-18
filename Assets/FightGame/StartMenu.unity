@@ -507,9 +507,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c84a91d2e3f14f5a8b7c6d5e4f302918, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartMenuBootstrap
-  nextSceneName: battle
-  menuBackgroundSprite: {fileID: 3980168229369012863, guid: 0f7268686c88c0e4b9525a4a67ca644e, type: 3}
-  streamingAssetRelativePath: Menu/start.png
+  menuBackgroundSprite: {fileID: -7783813424544337531, guid: 5e7cfbe7e23a7f044a857b10bd426eb8, type: 3}
+  newGameButtonSprite: {fileID: -1577471842124141534, guid: d00b2fa45a37f9140b4af91a8cca64b3, type: 3}
+  downloadButtonSprite: {fileID: 1406558649799654085, guid: d4e9565b71b47364b804ab052dae5d26, type: 3}
+  continueButtonSprite: {fileID: 4615209543915702287, guid: 8c684e0bb1a325e41a0d45b78895e486, type: 3}
+  exitButtonSprite: {fileID: -175592573822157977, guid: dbabb0c16f2fc294981a1114f6345756, type: 3}
+  emptySlotSprite: {fileID: 2410107086131594782, guid: 063f3fae34de0204895a5db8df57d401, type: 3}
+  titleFont: {fileID: 12800000, guid: ea65828a7e19c2043856e23cd0c849c3, type: 3}
+  saveSlotTitle: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u044F\u0447\u0435\u0439\u043A\u0443 \u0434\u043B\u044F \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F"
+  saveSlotTitleFontSize: 40
+  newGameSceneName: EducationDemo
+  continueSceneName: battle
+  buttonWidth: 560
+  buttonBottomMargin: 40
+  buttonSpacing: 12
+  slotWidth: 260
+  slotSpacing: 52
+  slotsCenterYOffset: -30
+  titleGapAboveSlots: 32
 --- !u!1 &1291085692
 GameObject:
   m_ObjectHideFlags: 0

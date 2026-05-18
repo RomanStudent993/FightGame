@@ -1,4 +1,3 @@
-using System.IO;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -8,23 +7,77 @@ using UnityEngine.UI;
 using UnityEditor;
 #endif
 #if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 #endif
 
-/// <summary>Собирает экран «Начало»: фон из Sprite (Menu/start) или из StreamingAssets, кнопки «Начать» / «Выйти».</summary>
+/// <summary>Главное меню: main.png, кнопки; «Новая игра» — выбор пустой ячейки сохранения.</summary>
 [DefaultExecutionOrder(-100)]
 public class StartMenuBootstrap : MonoBehaviour
 {
-    [SerializeField] string nextSceneName = "battle";
-    [Tooltip("Если задан — фон меню из ассета (например Assets/.../Menu/start.png). Иначе грузится файл ниже.")]
+    static readonly Color TitleColor = new Color(0.95f, 0.82f, 0.2f, 1f);
+
+    [Header("Фон")]
     [SerializeField] Sprite menuBackgroundSprite;
-    [Tooltip("Путь относительно StreamingAssets, если спрайт не задан (сырой PNG).")]
-    [SerializeField] string streamingAssetRelativePath = "Menu/start.png";
+
+    [Header("Кнопки меню")]
+    [SerializeField] Sprite newGameButtonSprite;
+    [SerializeField] Sprite downloadButtonSprite;
+    [SerializeField] Sprite continueButtonSprite;
+    [SerializeField] Sprite exitButtonSprite;
+
+    [Header("Ячейки сохранения")]
+    [SerializeField] Sprite emptySlotSprite;
+    [Tooltip("Aventura.ttf — подтягивается автоматически, если пусто.")]
+    [SerializeField] Font titleFont;
+    [SerializeField] string saveSlotTitle = "Выберите ячейку для сохранения";
+    [Tooltip("Должен совпадать с Font Size в импорте Aventura.ttf (Inspector).")]
+    [SerializeField] int saveSlotTitleFontSize = 40;
+
+    [Header("Сцены")]
+    [SerializeField] string newGameSceneName = "EducationDemo";
+    [SerializeField] string continueSceneName = "battle";
+
+    [Header("Вёрстка меню")]
+    [SerializeField] float buttonWidth = 560f;
+    [SerializeField] float buttonBottomMargin = 40f;
+    [SerializeField] float buttonSpacing = 12f;
+
+    [Header("Вёрстка ячеек")]
+    [SerializeField] float slotWidth = 260f;
+    [SerializeField] float slotSpacing = 52f;
+    [SerializeField] float slotsCenterYOffset = -30f;
+    [SerializeField] float titleGapAboveSlots = 32f;
+
+    GameObject _menuButtonsRoot;
+    GameObject _saveSlotPanel;
+    MenuStoryIntro _storyIntro;
+    bool _saveSlotsVisible;
 
     void Awake()
     {
+        GameFont.Reload();
+        titleFont = ResolveTitleFont();
+
         EnsureEventSystem();
         BuildUi();
+    }
+
+    Font ResolveTitleFont()
+    {
+        titleFont = GameFont.Aventura;
+        if (titleFont == null)
+            Debug.LogError("StartMenuBootstrap: не найден Aventura.ttf в Resources/Fonts.");
+        return titleFont;
+    }
+
+    void Update()
+    {
+        if (_storyIntro != null && _storyIntro.IsPlaying) return;
+
+        if (!_saveSlotsVisible) return;
+        if (WasEscapePressed())
+            ShowMainMenu();
     }
 
     static void EnsureEventSystem()
@@ -41,10 +94,11 @@ public class StartMenuBootstrap : MonoBehaviour
 
     void BuildUi()
     {
-        GameObject canvasGo = new GameObject("Canvas", typeof(RectTransform));
+        GameObject canvasGo = new GameObject("MenuCanvas", typeof(RectTransform));
         Canvas canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 0;
+
         CanvasScaler scaler = canvasGo.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
@@ -52,85 +106,250 @@ public class StartMenuBootstrap : MonoBehaviour
         scaler.matchWidthOrHeight = 0.5f;
         canvasGo.AddComponent<GraphicRaycaster>();
 
-        GameObject bgGo = CreateUiObject("Background", canvasGo.transform);
-        StretchFull(bgGo.GetComponent<RectTransform>());
         if (menuBackgroundSprite != null)
         {
-            Image img = bgGo.AddComponent<Image>();
-            img.sprite = menuBackgroundSprite;
-            img.type = Image.Type.Simple;
-            img.preserveAspect = true;
-            img.color = Color.white;
+            GameObject bgGo = CreateUiObject("Background", canvasGo.transform);
+            StretchFull(bgGo.GetComponent<RectTransform>());
+            Image bg = bgGo.AddComponent<Image>();
+            bg.sprite = menuBackgroundSprite;
+            bg.type = Image.Type.Simple;
+            bg.preserveAspect = false;
+            bg.raycastTarget = false;
             if (menuBackgroundSprite.texture != null)
                 menuBackgroundSprite.texture.filterMode = FilterMode.Point;
         }
-        else
-        {
-            RawImage raw = bgGo.AddComponent<RawImage>();
-            raw.color = Color.white;
-            LoadSplash(raw);
-        }
 
-        Vector2 btnSize = new Vector2(340, 80);
-        AddMenuButton(canvasGo.transform, "StartButton", "Начать", 0.36f, btnSize, LoadNextLevel);
-        AddMenuButton(canvasGo.transform, "QuitButton", "Выйти", 0.24f, btnSize, QuitGame);
+        _menuButtonsRoot = CreateUiObject("MenuButtons", canvasGo.transform);
+        StretchFull(_menuButtonsRoot.GetComponent<RectTransform>());
+        BuildMenuButtons(_menuButtonsRoot.transform);
+
+        _saveSlotPanel = CreateUiObject("SaveSlotPanel", canvasGo.transform);
+        StretchFull(_saveSlotPanel.GetComponent<RectTransform>());
+        BuildSaveSlotPanel(_saveSlotPanel.transform);
+        _saveSlotPanel.SetActive(false);
+
+        _storyIntro = GetComponent<MenuStoryIntro>();
+        if (_storyIntro == null)
+            _storyIntro = gameObject.AddComponent<MenuStoryIntro>();
+        _storyIntro.Build(canvasGo.transform);
     }
 
-    void AddMenuButton(Transform parent, string objectName, string label, float anchorYFromBottom, Vector2 size, UnityAction onClick)
+    void BuildMenuButtons(Transform parent)
     {
+        float bottom = buttonBottomMargin;
+
+        if (exitButtonSprite != null)
+        {
+            AddSpriteButton(parent, "Exit", exitButtonSprite, bottom, QuitGame);
+            bottom += ButtonHeight(exitButtonSprite) + buttonSpacing;
+        }
+
+        if (continueButtonSprite != null)
+        {
+            AddSpriteButton(parent, "Continue", continueButtonSprite, bottom, OnContinue);
+            bottom += ButtonHeight(continueButtonSprite) + buttonSpacing;
+        }
+
+        if (downloadButtonSprite != null)
+        {
+            AddSpriteButton(parent, "Download", downloadButtonSprite, bottom, OnDownload);
+            bottom += ButtonHeight(downloadButtonSprite) + buttonSpacing;
+        }
+
+        if (newGameButtonSprite != null)
+            AddSpriteButton(parent, "NewGame", newGameButtonSprite, bottom, OnNewGame);
+    }
+
+    void BuildSaveSlotPanel(Transform parent)
+    {
+        if (emptySlotSprite == null) return;
+
+        float slotHeight = SlotHeight(emptySlotSprite);
+        float rowWidth = slotWidth * 3f + slotSpacing * 2f;
+        float titleBlockHeight = Mathf.Max(80f, saveSlotTitleFontSize + 36f);
+        float titleY = slotsCenterYOffset + slotHeight * 0.5f + titleGapAboveSlots + titleBlockHeight * 0.5f;
+
+        Font font = ResolveTitleFont();
+        if (font == null) return;
+
+        font.RequestCharactersInTexture(saveSlotTitle, saveSlotTitleFontSize, FontStyle.Normal);
+
+        GameObject titleGo = CreateUiObject("Title", parent);
+        titleGo.transform.SetAsLastSibling();
+        RectTransform titleRt = titleGo.GetComponent<RectTransform>();
+        titleRt.anchorMin = new Vector2(0.5f, 0.5f);
+        titleRt.anchorMax = new Vector2(0.5f, 0.5f);
+        titleRt.pivot = new Vector2(0.5f, 0.5f);
+        titleRt.sizeDelta = new Vector2(1700f, titleBlockHeight);
+        titleRt.anchoredPosition = new Vector2(0f, titleY);
+
+        Text titleText = titleGo.AddComponent<Text>();
+        titleText.text = saveSlotTitle;
+        titleText.font = font;
+        titleText.fontSize = saveSlotTitleFontSize;
+        titleText.fontStyle = FontStyle.Normal;
+        titleText.color = TitleColor;
+        titleText.alignment = TextAnchor.MiddleCenter;
+        titleText.horizontalOverflow = HorizontalWrapMode.Overflow;
+        titleText.verticalOverflow = VerticalWrapMode.Overflow;
+        titleText.raycastTarget = false;
+        titleText.supportRichText = false;
+
+        GameObject rowGo = CreateUiObject("Slots", parent);
+        RectTransform rowRt = rowGo.GetComponent<RectTransform>();
+        rowRt.anchorMin = new Vector2(0.5f, 0.5f);
+        rowRt.anchorMax = new Vector2(0.5f, 0.5f);
+        rowRt.pivot = new Vector2(0.5f, 0.5f);
+        rowRt.sizeDelta = new Vector2(rowWidth, slotHeight);
+        rowRt.anchoredPosition = new Vector2(0f, slotsCenterYOffset);
+
+        float startX = -rowWidth * 0.5f + slotWidth * 0.5f;
+        for (int i = 0; i < 3; i++)
+        {
+            float x = startX + i * (slotWidth + slotSpacing);
+            AddEmptySlot(rowGo.transform, i + 1, x, OnSaveSlotClicked);
+        }
+    }
+
+    void AddEmptySlot(Transform parent, int slotIndex, float localX, UnityAction<int> onClick)
+    {
+        Vector2 size = new Vector2(slotWidth, SlotHeight(emptySlotSprite));
+
+        GameObject slotGo = CreateUiObject($"Slot{slotIndex}", parent);
+        RectTransform rt = slotGo.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = size;
+        rt.anchoredPosition = new Vector2(localX, 0f);
+
+        Image img = slotGo.AddComponent<Image>();
+        img.sprite = emptySlotSprite;
+        img.type = Image.Type.Simple;
+        img.preserveAspect = true;
+        if (emptySlotSprite.texture != null)
+            emptySlotSprite.texture.filterMode = FilterMode.Point;
+
+        Button btn = slotGo.AddComponent<Button>();
+        btn.targetGraphic = img;
+        ColorBlock colors = btn.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(0.93f, 0.93f, 0.93f, 1f);
+        colors.pressedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
+        btn.colors = colors;
+
+        int captured = slotIndex;
+        btn.onClick.AddListener(() => onClick(captured));
+    }
+
+    float ButtonHeight(Sprite sprite)
+    {
+        if (sprite == null) return 0f;
+        float aspect = sprite.rect.height / Mathf.Max(1f, sprite.rect.width);
+        return buttonWidth * aspect;
+    }
+
+    float SlotHeight(Sprite sprite)
+    {
+        if (sprite == null) return 0f;
+        float aspect = sprite.rect.height / Mathf.Max(1f, sprite.rect.width);
+        return slotWidth * aspect;
+    }
+
+    void AddSpriteButton(Transform parent, string objectName, Sprite sprite, float bottomOffset, UnityAction onClick)
+    {
+        Vector2 size = new Vector2(buttonWidth, ButtonHeight(sprite));
+
         GameObject btnGo = CreateUiObject(objectName, parent);
-        RectTransform btnRt = btnGo.GetComponent<RectTransform>();
-        btnRt.anchorMin = new Vector2(0.5f, anchorYFromBottom);
-        btnRt.anchorMax = new Vector2(0.5f, anchorYFromBottom);
-        btnRt.pivot = new Vector2(0.5f, 0.5f);
-        btnRt.sizeDelta = size;
-        btnRt.anchoredPosition = Vector2.zero;
+        RectTransform rt = btnGo.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0f);
+        rt.anchorMax = new Vector2(0.5f, 0f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.sizeDelta = size;
+        rt.anchoredPosition = new Vector2(0f, bottomOffset);
 
-        Image btnBg = btnGo.AddComponent<Image>();
-        btnBg.color = new Color(0.22f, 0.14f, 0.09f, 1f);
-
-        GameObject rimGo = CreateUiObject("Rim", btnGo.transform);
-        RectTransform rimRt = rimGo.GetComponent<RectTransform>();
-        StretchFull(rimRt);
-        rimRt.offsetMin = new Vector2(5, 5);
-        rimRt.offsetMax = new Vector2(-5, -5);
-        Image rim = rimGo.AddComponent<Image>();
-        rim.color = new Color(0.5f, 0.38f, 0.24f, 1f);
-        rim.raycastTarget = false;
+        Image img = btnGo.AddComponent<Image>();
+        img.sprite = sprite;
+        img.type = Image.Type.Simple;
+        img.preserveAspect = true;
+        if (sprite.texture != null)
+            sprite.texture.filterMode = FilterMode.Point;
 
         Button btn = btnGo.AddComponent<Button>();
+        btn.targetGraphic = img;
         ColorBlock colors = btn.colors;
-        colors.highlightedColor = new Color(0.62f, 0.48f, 0.32f, 1f);
-        colors.pressedColor = new Color(0.4f, 0.3f, 0.18f, 1f);
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(0.93f, 0.93f, 0.93f, 1f);
+        colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+        colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.7f);
         btn.colors = colors;
         btn.onClick.AddListener(onClick);
+    }
 
-        GameObject textGo = CreateUiObject("Label", btnGo.transform);
-        RectTransform textRt = textGo.GetComponent<RectTransform>();
-        StretchFull(textRt);
-        textRt.offsetMin = new Vector2(10, 8);
-        textRt.offsetMax = new Vector2(-10, -8);
-        Text txt = textGo.AddComponent<Text>();
-        txt.text = label;
-        txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        if (txt.font == null)
+    void OnNewGame() => ShowSaveSlots();
+
+    void ShowSaveSlots()
+    {
+        _saveSlotsVisible = true;
+        if (_menuButtonsRoot != null)
+            _menuButtonsRoot.SetActive(false);
+        if (_saveSlotPanel != null)
+            _saveSlotPanel.SetActive(true);
+    }
+
+    void ShowMainMenu()
+    {
+        _saveSlotsVisible = false;
+        if (_saveSlotPanel != null)
+            _saveSlotPanel.SetActive(false);
+        if (_menuButtonsRoot != null)
+            _menuButtonsRoot.SetActive(true);
+    }
+
+    static bool WasEscapePressed()
+    {
+        bool pressed = Input.GetKeyDown(KeyCode.Escape);
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null)
+            pressed |= Keyboard.current.escapeKey.wasPressedThisFrame;
+#endif
+        return pressed;
+    }
+
+    void OnSaveSlotClicked(int slotIndex)
+    {
+        _saveSlotsVisible = false;
+        if (_saveSlotPanel != null) _saveSlotPanel.SetActive(false);
+        if (_menuButtonsRoot != null) _menuButtonsRoot.SetActive(false);
+
+        if (_storyIntro != null)
+            _storyIntro.Play(newGameSceneName);
+        else
+            LoadScene(newGameSceneName);
+    }
+
+    void OnContinue() => LoadScene(continueSceneName);
+
+    void OnDownload()
+    {
+        Debug.Log("Download — пока не реализовано.");
+    }
+
+    static void LoadScene(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName))
         {
-            try
-            {
-                txt.font = Font.CreateDynamicFontFromOSFont(new[] { "Segoe UI", "Arial", "Calibri" }, 64);
-            }
-            catch
-            {
-                // ignored
-            }
+            Debug.LogWarning("StartMenuBootstrap: имя сцены не задано.");
+            return;
         }
-        txt.fontSize = 34;
-        txt.fontStyle = FontStyle.Bold;
-        txt.color = new Color(0.94f, 0.86f, 0.68f, 1f);
-        txt.alignment = TextAnchor.MiddleCenter;
-        txt.horizontalOverflow = HorizontalWrapMode.Overflow;
-        txt.verticalOverflow = VerticalWrapMode.Overflow;
-        txt.raycastTarget = false;
+
+        if (!Application.CanStreamedLevelBeLoaded(sceneName))
+        {
+            Debug.LogWarning($"StartMenuBootstrap: сцена «{sceneName}» не в Build Settings.");
+            return;
+        }
+
+        SceneManager.LoadScene(sceneName);
     }
 
     static GameObject CreateUiObject(string name, Transform parent)
@@ -147,41 +366,6 @@ public class StartMenuBootstrap : MonoBehaviour
         rt.offsetMin = Vector2.zero;
         rt.offsetMax = Vector2.zero;
         rt.localScale = Vector3.one;
-    }
-
-    void LoadSplash(RawImage target)
-    {
-        string path = Path.Combine(Application.streamingAssetsPath, streamingAssetRelativePath);
-        if (!File.Exists(path))
-        {
-            target.color = new Color(0.1f, 0.09f, 0.12f, 1f);
-            return;
-        }
-
-        byte[] bytes = File.ReadAllBytes(path);
-        if (bytes == null || bytes.Length == 0)
-        {
-            target.color = new Color(0.1f, 0.09f, 0.12f, 1f);
-            return;
-        }
-
-        Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Point;
-        tex.wrapMode = TextureWrapMode.Clamp;
-        if (!tex.LoadImage(bytes))
-        {
-            Destroy(tex);
-            target.color = new Color(0.1f, 0.09f, 0.12f, 1f);
-            return;
-        }
-
-        tex.Apply();
-        target.texture = tex;
-    }
-
-    void LoadNextLevel()
-    {
-        SceneManager.LoadScene(nextSceneName);
     }
 
     void QuitGame()

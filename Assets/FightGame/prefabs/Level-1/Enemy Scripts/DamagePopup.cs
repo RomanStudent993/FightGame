@@ -48,8 +48,8 @@ public class DamagePopup : MonoBehaviour
         text.fontSize = 42;
         text.alignment = TextAnchor.MiddleCenter;
         Font font = ResolveFont();
-        if (font != null)
-            text.font = font;
+        text.font = font;
+        GameFont.RequestGlyphs(text.text, kFontSize, FontStyle.Bold);
         text.fontStyle = FontStyle.Bold;
         text.raycastTarget = false;
 
@@ -69,18 +69,7 @@ public class DamagePopup : MonoBehaviour
     static Font ResolveFont()
     {
         if (_cachedFont != null) return _cachedFont;
-        _cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        if (_cachedFont == null)
-        {
-            try
-            {
-                _cachedFont = Font.CreateDynamicFontFromOSFont(new[] { "Arial", "Calibri", "Verdana", "Segoe UI" }, 64);
-            }
-            catch
-            {
-                // ignored
-            }
-        }
+        _cachedFont = GameFont.Default;
         return _cachedFont;
     }
 

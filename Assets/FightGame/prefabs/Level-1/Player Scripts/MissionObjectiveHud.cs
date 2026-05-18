@@ -63,9 +63,8 @@ public class MissionObjectiveHud : MonoBehaviour
             new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f),
             anchorFromTopRight, panelSize);
 
-        // В актуальных Unity Arial.ttf из built-in Resources убран — только LegacyRuntime.ttf.
-        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        RequestHudGlyphs(font);
+        Font font = GameFont.Default;
+        GameFont.RequestGlyphs(subtitleText + taskBeforeKill + taskAfterKill, subtitleFontSize, taskFontSize);
 
         const float subtitleBlockH = 36f;
         const float gap = 8f;
@@ -100,14 +99,6 @@ public class MissionObjectiveHud : MonoBehaviour
         taskUi.horizontalOverflow = HorizontalWrapMode.Wrap;
         taskUi.verticalOverflow = VerticalWrapMode.Truncate;
         taskUi.raycastTarget = false;
-    }
-
-    void RequestHudGlyphs(Font font)
-    {
-        if (font == null) return;
-        string all = subtitleText + taskBeforeKill + taskAfterKill;
-        font.RequestCharactersInTexture(all, subtitleFontSize, FontStyle.Normal);
-        font.RequestCharactersInTexture(all, taskFontSize, FontStyle.Normal);
     }
 
     void ApplyTexts()
