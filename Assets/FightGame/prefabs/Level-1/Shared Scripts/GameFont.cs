@@ -3,13 +3,13 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-/// <summary>Шрифт Aventura — только из Resources/Fonts/Aventura.ttf (без LegacyRuntime).</summary>
+/// <summary>Шрифт Aventura — только ofont.ru_Aventura.ttf (скачанный с ofont.ru).</summary>
 public static class GameFont
 {
-    const string ResourcesPath = "Fonts/Aventura";
+    const string ResourcesPath = "Fonts/ofont.ru_Aventura";
 #if UNITY_EDITOR
-    const string EditorAssetPath = "Assets/FightGame/Resources/Fonts/Aventura.ttf";
-    const string EditorMenuAssetPath = "Assets/FightGame/prefabs/Menu/ofont.ru_Aventura.ttf";
+    const string EditorSourcePath = "Assets/FightGame/prefabs/Menu/ofont.ru_Aventura.ttf";
+    const string EditorResourcesPath = "Assets/FightGame/Resources/Fonts/ofont.ru_Aventura.ttf";
 #endif
 
     static Font _aventura;
@@ -20,13 +20,15 @@ public static class GameFont
         {
             if (_aventura != null) return _aventura;
 
-            _aventura = Resources.Load<Font>(ResourcesPath);
 #if UNITY_EDITOR
+            _aventura = AssetDatabase.LoadAssetAtPath<Font>(EditorSourcePath);
             if (_aventura == null)
-                _aventura = AssetDatabase.LoadAssetAtPath<Font>(EditorAssetPath);
-            if (_aventura == null)
-                _aventura = AssetDatabase.LoadAssetAtPath<Font>(EditorMenuAssetPath);
+                _aventura = AssetDatabase.LoadAssetAtPath<Font>(EditorResourcesPath);
 #endif
+
+            if (_aventura == null)
+                _aventura = Resources.Load<Font>(ResourcesPath);
+
             return _aventura;
         }
     }

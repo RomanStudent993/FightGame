@@ -7,27 +7,26 @@ using UnityEngine.UI;
 using UnityEngine.InputSystem;
 #endif
 
-/// <summary>Экран перед туториалом: loading.jpeg и текст по буквам (Aventura).</summary>
+/// <summary>Экран перед туториалом: фон + текст по буквам (Aventura).</summary>
 public class MenuStoryIntro : MonoBehaviour
 {
     static readonly Color StoryColor = new Color(0.94f, 0.86f, 0.62f, 1f);
 
     const string DefaultStory =
-        "Замок Альтарис горел три ночи.\n" +
-        "Ты видел зарево из своего дома в лесу.\n" +
-        "На четвёртую ночь огонь погас.\n" +
-        "Тишина страшнее пламени.\n" +
-        "Гниющий Король пришёл не один. С ним рыцари без лиц, самураи из сожжённых земель, маги, забывшие своё имя, и гарпии, которые помнят только голод.\n" +
-        "Принцесса - в башне. Живая. Пока что.\n" +
-        "Ты не герой. Ты даже не солдат.\n" +
-        "Ты - тот, кто живёт рядом с лесом и умеет молчать.\n" +
-        "Но меч когда-то держал.\n" +
-        "И чучело во дворе до сих пор помнит твои удары.\n" +
-        "Замок ждёт.";
+        "Это случилось на рассвете.\n\n" +
+        "Гниющий Король пришел к стенам Альтариса не один. С ним была армия - рыцари без чести, самураи из мертвых земель, маги с пустыми глазами и гарпии, застилавшие небо.\n\n" +
+        "Замок пал за час.\n\n" +
+        "Королевская стража полегла у ворот. Совет магов исчез в зеленом пламени.\n\n" +
+        "Гниющий Король прошел через тронный зал, не останавливаясь. Ему не нужен был трон. Ему не нужна была корона.\n\n" +
+        "Ему нужна была принцесса.\n\n" +
+        "Теперь она в его руках. Никто не знает, что он с ней сделает.\n\n" +
+        "Но ты знаешь одно - ты должен помочь.\n\n" +
+        "Замок ждет. Принцесса ждет.\n\n" +
+        "А впереди - только враги.";
 
     [Header("Оформление")]
     [SerializeField] Sprite loadingBackground;
-    [SerializeField] int storyFontSize = 22;
+    [SerializeField] int storyFontSize = 32;
     [SerializeField] float lineSpacing = 0.92f;
     [SerializeField] Color storyTextColor = StoryColor;
 
@@ -43,6 +42,8 @@ public class MenuStoryIntro : MonoBehaviour
     [SerializeField] string storyText = DefaultStory;
 
     GameObject _panel;
+    Canvas _storyCanvas;
+    Image _backgroundImage;
     Text _storyUi;
     ScrollRect _scroll;
     RectTransform _scrollContent;
@@ -61,19 +62,22 @@ public class MenuStoryIntro : MonoBehaviour
         _panel.transform.SetParent(canvasParent, false);
         StretchFull(_panel.GetComponent<RectTransform>());
 
-        if (loadingBackground != null)
-        {
-            GameObject bgGo = new GameObject("LoadingBg", typeof(RectTransform));
-            bgGo.transform.SetParent(_panel.transform, false);
-            StretchFull(bgGo.GetComponent<RectTransform>());
-            Image bg = bgGo.AddComponent<Image>();
-            bg.sprite = loadingBackground;
-            bg.type = Image.Type.Simple;
-            bg.preserveAspect = false;
-            bg.raycastTarget = false;
-            if (loadingBackground.texture != null)
-                loadingBackground.texture.filterMode = FilterMode.Point;
-        }
+        _storyCanvas = _panel.AddComponent<Canvas>();
+        _storyCanvas.overrideSorting = true;
+        _storyCanvas.sortingOrder = 200;
+        _panel.AddComponent<GraphicRaycaster>();
+
+        Canvas parentCanvas = canvasParent.GetComponent<Canvas>();
+        if (parentCanvas != null)
+            _storyCanvas.worldCamera = parentCanvas.worldCamera;
+
+        GameObject bgGo = new GameObject("Background", typeof(RectTransform));
+        bgGo.transform.SetParent(_panel.transform, false);
+        StretchFull(bgGo.GetComponent<RectTransform>());
+        _backgroundImage = bgGo.AddComponent<Image>();
+        _backgroundImage.raycastTarget = false;
+        _backgroundImage.type = Image.Type.Simple;
+        _backgroundImage.preserveAspect = false;
 
         GameObject scrollGo = new GameObject("StoryScroll", typeof(RectTransform));
         scrollGo.transform.SetParent(_panel.transform, false);
@@ -93,10 +97,7 @@ public class MenuStoryIntro : MonoBehaviour
         viewportGo.transform.SetParent(scrollGo.transform, false);
         RectTransform viewportRt = viewportGo.GetComponent<RectTransform>();
         StretchFull(viewportRt);
-        Image viewportMask = viewportGo.AddComponent<Image>();
-        viewportMask.color = new Color(1f, 1f, 1f, 0.01f);
-        Mask mask = viewportGo.AddComponent<Mask>();
-        mask.showMaskGraphic = false;
+        viewportGo.AddComponent<RectMask2D>();
         _scroll.viewport = viewportRt;
 
         GameObject contentGo = new GameObject("Content", typeof(RectTransform));
@@ -134,6 +135,17 @@ public class MenuStoryIntro : MonoBehaviour
         _panel.SetActive(false);
     }
 
+    void ShowBackground()
+    {
+        if (_backgroundImage == null || loadingBackground == null) return;
+
+        if (loadingBackground.texture != null)
+            loadingBackground.texture.filterMode = FilterMode.Point;
+
+        _backgroundImage.sprite = loadingBackground;
+        _backgroundImage.enabled = true;
+    }
+
     public void Play(string sceneName)
     {
         if (_panel == null) return;
@@ -142,6 +154,7 @@ public class MenuStoryIntro : MonoBehaviour
         _playStartTime = Time.unscaledTime;
         _panel.transform.SetAsLastSibling();
         _panel.SetActive(true);
+        ShowBackground();
 
         Font font = LoadStoryFont();
         _storyUi.font = font;
@@ -208,7 +221,7 @@ public class MenuStoryIntro : MonoBehaviour
     static string CompressStorySpacing(string raw)
     {
         if (string.IsNullOrEmpty(raw)) return raw;
-        return raw.Replace("\r\n", "\n").Replace("\n\n\n", "\n").Replace("\n\n", "\n");
+        return raw.Replace("\r\n", "\n").Replace("\n\n\n", "\n\n");
     }
 
     static Font LoadStoryFont()
@@ -216,7 +229,7 @@ public class MenuStoryIntro : MonoBehaviour
         GameFont.Reload();
         Font font = GameFont.Aventura;
         if (font == null)
-            Debug.LogError("MenuStoryIntro: не найден Aventura.ttf в Resources/Fonts.");
+            Debug.LogError("MenuStoryIntro: не найден ofont.ru_Aventura.ttf (prefabs/Menu или Resources/Fonts).");
         return font;
     }
 
@@ -229,10 +242,6 @@ public class MenuStoryIntro : MonoBehaviour
     void UpdateContentHeight()
     {
         if (_storyUi == null || _scrollContent == null) return;
-
-        float width = _scroll != null && _scroll.viewport != null
-            ? _scroll.viewport.rect.width - 12f
-            : 1700f;
 
         float height = _storyUi.preferredHeight + 24f;
         _scrollContent.sizeDelta = new Vector2(0f, Mathf.Max(height, 200f));

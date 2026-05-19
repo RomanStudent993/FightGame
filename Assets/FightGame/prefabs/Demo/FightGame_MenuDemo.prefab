@@ -50,7 +50,7 @@ MonoBehaviour:
   continueButtonSprite: {fileID: 4615209543915702287, guid: 8c684e0bb1a325e41a0d45b78895e486, type: 3}
   exitButtonSprite: {fileID: -175592573822157977, guid: dbabb0c16f2fc294981a1114f6345756, type: 3}
   emptySlotSprite: {fileID: 2410107086131594782, guid: 063f3fae34de0204895a5db8df57d401, type: 3}
-  titleFont: {fileID: 12800000, guid: ea65828a7e19c2043856e23cd0c849c3, type: 3}
+  titleFont: {fileID: 12800000, guid: 3d01ea3a6046e36418f2157b3ef31deb, type: 3}
   saveSlotTitle: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u044F\u0447\u0435\u0439\u043A\u0443 \u0434\u043B\u044F \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F"
   saveSlotTitleFontSize: 40
   newGameSceneName: EducationDemo

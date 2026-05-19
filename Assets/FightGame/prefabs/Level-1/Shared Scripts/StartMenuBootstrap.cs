@@ -28,10 +28,10 @@ public class StartMenuBootstrap : MonoBehaviour
 
     [Header("Ячейки сохранения")]
     [SerializeField] Sprite emptySlotSprite;
-    [Tooltip("Aventura.ttf — подтягивается автоматически, если пусто.")]
+    [Tooltip("ofont.ru_Aventura.ttf — подтягивается автоматически, если пусто.")]
     [SerializeField] Font titleFont;
     [SerializeField] string saveSlotTitle = "Выберите ячейку для сохранения";
-    [Tooltip("Должен совпадать с Font Size в импорте Aventura.ttf (Inspector).")]
+    [Tooltip("Должен совпадать с Font Size в импорте ofont.ru_Aventura.ttf (Inspector).")]
     [SerializeField] int saveSlotTitleFontSize = 40;
 
     [Header("Сцены")]
@@ -51,6 +51,7 @@ public class StartMenuBootstrap : MonoBehaviour
 
     GameObject _menuButtonsRoot;
     GameObject _saveSlotPanel;
+    GameObject _menuBackgroundGo;
     MenuStoryIntro _storyIntro;
     bool _saveSlotsVisible;
 
@@ -67,7 +68,7 @@ public class StartMenuBootstrap : MonoBehaviour
     {
         titleFont = GameFont.Aventura;
         if (titleFont == null)
-            Debug.LogError("StartMenuBootstrap: не найден Aventura.ttf в Resources/Fonts.");
+            Debug.LogError("StartMenuBootstrap: не найден ofont.ru_Aventura.ttf (prefabs/Menu или Resources/Fonts).");
         return titleFont;
     }
 
@@ -108,9 +109,9 @@ public class StartMenuBootstrap : MonoBehaviour
 
         if (menuBackgroundSprite != null)
         {
-            GameObject bgGo = CreateUiObject("Background", canvasGo.transform);
-            StretchFull(bgGo.GetComponent<RectTransform>());
-            Image bg = bgGo.AddComponent<Image>();
+            _menuBackgroundGo = CreateUiObject("Background", canvasGo.transform);
+            StretchFull(_menuBackgroundGo.GetComponent<RectTransform>());
+            Image bg = _menuBackgroundGo.AddComponent<Image>();
             bg.sprite = menuBackgroundSprite;
             bg.type = Image.Type.Simple;
             bg.preserveAspect = false;
@@ -131,6 +132,7 @@ public class StartMenuBootstrap : MonoBehaviour
         _storyIntro = GetComponent<MenuStoryIntro>();
         if (_storyIntro == null)
             _storyIntro = gameObject.AddComponent<MenuStoryIntro>();
+
         _storyIntro.Build(canvasGo.transform);
     }
 
@@ -304,6 +306,15 @@ public class StartMenuBootstrap : MonoBehaviour
             _saveSlotPanel.SetActive(false);
         if (_menuButtonsRoot != null)
             _menuButtonsRoot.SetActive(true);
+        if (_menuBackgroundGo != null)
+            _menuBackgroundGo.SetActive(true);
+    }
+
+    void HideMenuChrome()
+    {
+        if (_saveSlotPanel != null) _saveSlotPanel.SetActive(false);
+        if (_menuButtonsRoot != null) _menuButtonsRoot.SetActive(false);
+        if (_menuBackgroundGo != null) _menuBackgroundGo.SetActive(false);
     }
 
     static bool WasEscapePressed()
@@ -319,8 +330,7 @@ public class StartMenuBootstrap : MonoBehaviour
     void OnSaveSlotClicked(int slotIndex)
     {
         _saveSlotsVisible = false;
-        if (_saveSlotPanel != null) _saveSlotPanel.SetActive(false);
-        if (_menuButtonsRoot != null) _menuButtonsRoot.SetActive(false);
+        HideMenuChrome();
 
         if (_storyIntro != null)
             _storyIntro.Play(newGameSceneName);
