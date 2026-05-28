@@ -15,6 +15,16 @@ public class PlayerCombatKnockback : MonoBehaviour
 
     public bool IsHorizontalInputSuppressed => Time.time < horizontalInputSuppressedUntil;
 
+    public void ClearInputLock()
+    {
+        horizontalInputSuppressedUntil = 0f;
+        if (rb != null)
+        {
+            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            rb.angularVelocity = 0f;
+        }
+    }
+
     /// <param name="velocityX">Горизонтальная скорость (уже со знаком).</param>
     /// <param name="instantSlideDistance">Полный сдвиг по X; при portion &lt; 1 только часть мгновенно, остальное даётся скоростью за suppress.</param>
     /// <param name="instantSlidePortion">1 = весь сдвиг за один кадр; 0.2 ≈ 20% рывок, 80% — плавнее за время suppress.</param>

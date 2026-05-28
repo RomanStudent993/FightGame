@@ -11,7 +11,7 @@ public class EvilWizardRangedCombat : MonoBehaviour
 {
     [Header("Дистанция")]
     [Tooltip("Минимальная дистанция по X для выстрела.")]
-    public float attackRangeMin = 0.55f;
+    public float attackRangeMin = 0.18f;
     [Tooltip("Максимальная дистанция по X для выстрела.")]
     public float attackRangeMax = 3.35f;
     [Tooltip("На каком расстоянии EnemyAI останавливается перед игроком.")]

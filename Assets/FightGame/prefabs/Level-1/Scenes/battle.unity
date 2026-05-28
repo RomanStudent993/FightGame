@@ -3735,6 +3735,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2077000001}
   - component: {fileID: 2077000002}
+  - component: {fileID: 2077000003}
   m_Layer: 0
   m_Name: Level1ObjectiveController
   m_TagString: Untagged
@@ -3784,6 +3785,29 @@ MonoBehaviour:
   delayBeforeFade: 1
   fadeDuration: 0.35
   loadingScreenDuration: 0.9
+--- !u!114 &2077000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2077000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97637f82ac2751143adb93f9bd09556e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::BattleIntroController
+  closeOrthoSize: 1.35
+  closeFocusHeightFromFeet: 0.82
+  enemySnapDuration: 0.22
+  pullBackDuration: 1.1
+  playerIntroAttackMinHold: 0.28
+  holdAfterPlayerAttack: 0.32
+  holdAfterEnemyAttack: 0.38
+  countdownStepDuration: 0.65
+  countdownFontSize: 96
+  finalCameraPosition: {x: 0, y: 4.07, z: -10}
+  finalOrthoSize: 5
 --- !u!114 &3847291054
 MonoBehaviour:
   m_ObjectHideFlags: 0

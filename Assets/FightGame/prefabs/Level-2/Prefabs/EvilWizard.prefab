@@ -434,7 +434,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7f8a9b0c1d2345678901234abcdef01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EvilWizardRangedCombat
-  attackRangeMin: 0.55
+  attackRangeMin: 0.18
   attackRangeMax: 3.35
   preferredStopDistance: 2.35
   verticalOverlapSlack: 0.35

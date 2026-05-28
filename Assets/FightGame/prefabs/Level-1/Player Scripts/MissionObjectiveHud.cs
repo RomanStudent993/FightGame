@@ -44,6 +44,21 @@ public class MissionObjectiveHud : MonoBehaviour
 
     void Start()
     {
+        if (!BattleIntroController.FightStarted)
+        {
+            StartCoroutine(WaitForFightStartThenBuildHud());
+            return;
+        }
+
+        BuildHud();
+        ApplyTexts();
+    }
+
+    System.Collections.IEnumerator WaitForFightStartThenBuildHud()
+    {
+        while (!BattleIntroController.FightStarted)
+            yield return null;
+
         BuildHud();
         ApplyTexts();
     }
