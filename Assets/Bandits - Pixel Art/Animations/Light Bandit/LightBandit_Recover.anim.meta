@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7e14b50f556b3e94ba95bd35d6cde30f
+timeCreated: 1514705648
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 104130
+  packageName: Bandits - Pixel Art
+  packageVersion: 2.2
+  assetPath: Assets/Bandits - Pixel Art/Animations/Light Bandit/LightBandit_Recover.anim
+  uploadId: 384983

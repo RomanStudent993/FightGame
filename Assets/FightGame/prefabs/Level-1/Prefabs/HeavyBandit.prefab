@@ -337,10 +337,10 @@ MonoBehaviour:
   underJumpMaxDy: 5.5
   underPlayerAlignedPersistSeconds: 0.22
   underJumpTargetFeetYOffset: -0.42
-  underJumpForceMultiplier: 1.22
+  underJumpForceMultiplier: 0
   underJumpHorizontalSpeed: 2.65
   underJumpAirSteerMultiplier: 1.52
-  jumpForce: 14
+  jumpForce: 0
   platformJumpVerticalHold: 0.14
   platformApproachAirSpeed: 2.15
   platformApproachAirDuration: 0.42
@@ -362,6 +362,7 @@ MonoBehaviour:
   platformJumpAllowWhenVerticalPathBlocked: 1
   platformFeetOverlapWidth: 3.2
   platformFeetOverlapHeight: 0.55
+  allowPlatformJumps: 0
 --- !u!114 &-7764881440689622182
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -377,6 +378,7 @@ MonoBehaviour:
   damage: 25
   damageCooldown: 0.8
   triggerAttackAnimation: 1
+  reflectDamageToEnemyOnShieldBlock: 0
   thinkTimeBeforeFirstHit: 0.09
   hitKnockbackSpeed: 5.1
   shieldBreakKnockbackSpeed: 6.75
@@ -396,7 +398,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 701311879569352503}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a23d8808aac85e442926726d92e0f9b3, type: 3}
   m_Name: 

@@ -596,6 +596,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerShieldDefense
   requireMouseHeld: 1
+  blocksBeforeShieldBreak: 2
   postBreakBlockLockout: 0.85
   shieldBreakSound: {fileID: 8300000, guid: f77988f3737d1354db77367424407d39, type: 3}
 --- !u!114 &-7766000000000000001

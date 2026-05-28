@@ -1,5 +1,9 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 /// <summary>Правый верхний угол: жёлтый подзаголовок и строка задачи. После смерти врага — смена текста задачи.</summary>
 public class MissionObjectiveHud : MonoBehaviour
@@ -9,8 +13,16 @@ public class MissionObjectiveHud : MonoBehaviour
     [SerializeField] int subtitleFontSize = 28;
     [SerializeField] int taskFontSize = 18;
     [SerializeField] string subtitleText = "Первая кровь";
-    [SerializeField] string taskBeforeKill = "Убейте врага";
-    [SerializeField] string taskAfterKill = "Покиньте помещение";
+    [SerializeField] string taskBeforeKill = "Одолейте врага";
+    [SerializeField] string taskAfterKill = "Переход на уровень 2...";
+    [Header("Переход на следующий уровень")]
+    [SerializeField] bool loadNextLevelAfterKill = true;
+    [SerializeField] string nextSceneName = "Level-2";
+    [SerializeField] string nextScenePath = "Assets/FightGame/prefabs/Level-2/Level-2.unity";
+    [SerializeField] Sprite loadingBackground;
+    [SerializeField] float delayBeforeFade = 1f;
+    [SerializeField] float fadeDuration = 0.35f;
+    [SerializeField] float loadingScreenDuration = 0.9f;
 
     static readonly Color YellowSubtitle = new Color(0.95f, 0.82f, 0.2f, 1f);
     static readonly Color YellowTask = new Color(1f, 0.92f, 0.35f, 1f);
@@ -18,6 +30,7 @@ public class MissionObjectiveHud : MonoBehaviour
     Text subtitleUi;
     Text taskUi;
     bool enemyKilled;
+    bool transitionStarted;
 
     void OnEnable()
     {
@@ -42,6 +55,113 @@ public class MissionObjectiveHud : MonoBehaviour
         enemyKilled = true;
         if (taskUi != null)
             taskUi.text = taskAfterKill;
+        if (loadNextLevelAfterKill && !transitionStarted)
+            StartCoroutine(LoadNextLevelRoutine());
+    }
+
+    System.Collections.IEnumerator LoadNextLevelRoutine()
+    {
+        transitionStarted = true;
+        Canvas canvas = BuildLoadingCanvas();
+        if (canvas == null)
+            yield break;
+
+        Image black = canvas.transform.Find("Black")?.GetComponent<Image>();
+        Image bg = canvas.transform.Find("LoadingImage")?.GetComponent<Image>();
+        Text continueUi = canvas.transform.Find("ContinueLabel")?.GetComponent<Text>();
+        if (black == null || bg == null || continueUi == null)
+            yield break;
+
+        canvas.gameObject.SetActive(true);
+        black.color = new Color(0f, 0f, 0f, 0f);
+        bg.color = new Color(1f, 1f, 1f, 0f);
+
+        float startDelay = Mathf.Max(0f, delayBeforeFade);
+        if (startDelay > 0.001f)
+            yield return new WaitForSecondsRealtime(startDelay);
+
+        float fadeT = Mathf.Max(0.05f, fadeDuration);
+        float t = 0f;
+        while (t < fadeT)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / fadeT);
+            black.color = new Color(0f, 0f, 0f, 0.95f * k);
+            bg.color = new Color(1f, 1f, 1f, k);
+            yield return null;
+        }
+
+        yield return new WaitForSecondsRealtime(Mathf.Max(0.1f, loadingScreenDuration));
+        continueUi.gameObject.SetActive(true);
+
+        while (!WasAnyContinuePressed())
+            yield return null;
+
+        if (!TryLoadNextScene())
+            Debug.LogWarning($"MissionObjectiveHud: scenes '{nextSceneName}' and '{nextScenePath}' are unavailable.");
+    }
+
+    Canvas BuildLoadingCanvas()
+    {
+        Canvas canvas = ContinuePrompt.CreateTransitionCanvas("LevelTransition_Loading", 1300);
+        Transform root = canvas.transform;
+
+        RectTransform blackRt = CreateRect(root, "Black",
+            Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        Image black = blackRt.gameObject.AddComponent<Image>();
+        black.color = new Color(0f, 0f, 0f, 0f);
+
+        RectTransform imgRt = CreateRect(root, "LoadingImage",
+            Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        Image bg = imgRt.gameObject.AddComponent<Image>();
+        bg.sprite = loadingBackground;
+        bg.preserveAspect = false;
+        bg.color = new Color(1f, 1f, 1f, 0f);
+
+        ContinuePrompt.CreateLabel(root);
+
+        canvas.gameObject.SetActive(false);
+        return canvas;
+    }
+
+    static bool WasAnyContinuePressed()
+    {
+        if (Input.anyKeyDown) return true;
+        if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2))
+            return true;
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) return true;
+        if (Mouse.current != null &&
+            (Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.rightButton.wasPressedThisFrame || Mouse.current.middleButton.wasPressedThisFrame))
+            return true;
+        if (Gamepad.current != null && (
+            Gamepad.current.buttonSouth.wasPressedThisFrame ||
+            Gamepad.current.buttonNorth.wasPressedThisFrame ||
+            Gamepad.current.buttonWest.wasPressedThisFrame ||
+            Gamepad.current.buttonEast.wasPressedThisFrame ||
+            Gamepad.current.startButton.wasPressedThisFrame))
+            return true;
+#endif
+        return false;
+    }
+
+    bool TryLoadNextScene()
+    {
+        // Для перехода из Level-1 в Level-2 грузим целевую сцену напрямую по пути из Build Settings.
+        // Это исключает попадание в другой scene entry с таким же именем.
+        if (!string.IsNullOrEmpty(nextScenePath) && Application.CanStreamedLevelBeLoaded(nextScenePath))
+        {
+            SceneManager.LoadScene(nextScenePath, LoadSceneMode.Single);
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(nextSceneName) && Application.CanStreamedLevelBeLoaded(nextSceneName))
+        {
+            SceneManager.LoadScene(nextSceneName, LoadSceneMode.Single);
+            return true;
+        }
+
+        return false;
     }
 
     void BuildHud()

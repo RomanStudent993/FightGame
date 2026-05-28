@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 15cabd66192c0a2499ce5a82ef30e3e1
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 165188
+  packageName: Hero Knight - Pixel Art
+  packageVersion: 1.2
+  assetPath: Assets/Hero Knight - Pixel Art/Animations/HeroKnight_WallSlide.anim
+  uploadId: 447637

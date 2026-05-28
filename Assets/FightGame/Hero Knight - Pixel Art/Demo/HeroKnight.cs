@@ -55,6 +55,8 @@ public class HeroKnight : MonoBehaviour {
     private float               m_rollCurrentTime;
     private PlayerCombatKnockback m_hitKnockback;
     private SimpleHealth          m_health;
+
+    public bool NoBlood => m_noBlood;
     private float                 m_airBlockedHorizTimer;
     private float                 m_inputX;
     private readonly RaycastHit2D[] m_castHits = new RaycastHit2D[12];
@@ -84,6 +86,9 @@ public class HeroKnight : MonoBehaviour {
 
     void Update ()
     {
+        if (m_health != null && m_health.IsDead)
+            return;
+
         m_inputX = Input.GetAxis("Horizontal");
 
         m_timeSinceAttack += Time.deltaTime;
@@ -181,6 +186,9 @@ public class HeroKnight : MonoBehaviour {
 
     void FixedUpdate()
     {
+        if (m_health != null && m_health.IsDead)
+            return;
+
         if (m_rolling)
             return;
         if (m_hitKnockback != null && m_hitKnockback.IsHorizontalInputSuppressed)
@@ -284,7 +292,8 @@ public class HeroKnight : MonoBehaviour {
 
     void LateUpdate()
     {
-        ProcessHealHpAtEndOfAnimation();
+        if (m_health == null || !m_health.IsDead)
+            ProcessHealHpAtEndOfAnimation();
 
         if (m_spriteDrive == null || m_spriteVisual == null) return;
 

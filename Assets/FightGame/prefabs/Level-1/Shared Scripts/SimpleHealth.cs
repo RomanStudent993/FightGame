@@ -109,6 +109,9 @@ public class SimpleHealth : MonoBehaviour
         if (animator != null)
         {
             ClearNonDeathTriggers(animator);
+            HeroKnight heroKnight = GetComponent<HeroKnight>();
+            if (heroKnight != null)
+                animator.SetBool("noBlood", heroKnight.NoBlood);
             animator.SetTrigger("Death");
         }
         Died?.Invoke(gameObject);
@@ -148,7 +151,7 @@ public class SimpleHealth : MonoBehaviour
         while (anim != null && elapsed < timeout)
         {
             AnimatorStateInfo si = anim.GetCurrentAnimatorStateInfo(0);
-            if (si.IsName("Death") && si.normalizedTime >= 0.95f)
+            if ((si.IsName("Death") || si.IsName("DeathNoBlood")) && si.normalizedTime >= 0.95f)
             {
                 anim.speed = 0f;
                 yield break;
@@ -182,7 +185,11 @@ public class SimpleHealth : MonoBehaviour
             if (c is Collider2D) continue;
             if (c is Rigidbody2D) continue;
             if (c is Joint2D) continue;
+            if (c.GetType().Name == "BossEnemyBridge")
+                continue;
             if (c is PlayerHealthBarHud)
+                continue;
+            if (c is HeroKnight)
                 continue;
             if (c is Behaviour be)
                 be.enabled = false;

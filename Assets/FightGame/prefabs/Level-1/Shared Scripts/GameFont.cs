@@ -13,6 +13,7 @@ public static class GameFont
 #endif
 
     static Font _aventura;
+    static Font _builtInFallback;
 
     public static Font Aventura
     {
@@ -35,9 +36,52 @@ public static class GameFont
 
     public static Font Default => Aventura;
 
+    /// <summary>Unity built-in с кириллицей, если Aventura недоступен или без нужных глифов.</summary>
+    public static Font BuiltInFallback
+    {
+        get
+        {
+            if (_builtInFallback != null) return _builtInFallback;
+            _builtInFallback = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return _builtInFallback;
+        }
+    }
+
+    /// <summary>Aventura, если в шрифте есть все символы строки; иначе встроенный fallback.</summary>
+    public static Font ResolveForText(string text, int fontSize, FontStyle style = FontStyle.Normal)
+    {
+        if (string.IsNullOrEmpty(text))
+            return Aventura ?? BuiltInFallback;
+
+        Font primary = Aventura;
+        if (primary != null)
+        {
+            RequestGlyphs(text, fontSize, style);
+            bool allPresent = true;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (char.IsWhiteSpace(c)) continue;
+                if (!primary.HasCharacter(c))
+                {
+                    allPresent = false;
+                    break;
+                }
+            }
+
+            if (allPresent) return primary;
+        }
+
+        Font fallback = BuiltInFallback;
+        if (fallback != null)
+            fallback.RequestCharactersInTexture(text, fontSize, style);
+        return fallback;
+    }
+
     public static void Reload()
     {
         _aventura = null;
+        _builtInFallback = null;
     }
 
     public static void RequestGlyphs(string text, int fontSize, FontStyle style = FontStyle.Normal)

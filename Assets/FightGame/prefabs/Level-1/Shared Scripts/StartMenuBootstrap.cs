@@ -66,9 +66,9 @@ public class StartMenuBootstrap : MonoBehaviour
 
     Font ResolveTitleFont()
     {
-        titleFont = GameFont.Aventura;
+        titleFont = GameFont.ResolveForText(saveSlotTitle, saveSlotTitleFontSize);
         if (titleFont == null)
-            Debug.LogError("StartMenuBootstrap: не найден ofont.ru_Aventura.ttf (prefabs/Menu или Resources/Fonts).");
+            Debug.LogError("StartMenuBootstrap: не найден шрифт для заголовка ячеек (Aventura / LegacyRuntime).");
         return titleFont;
     }
 
@@ -171,13 +171,27 @@ public class StartMenuBootstrap : MonoBehaviour
         float titleBlockHeight = Mathf.Max(80f, saveSlotTitleFontSize + 36f);
         float titleY = slotsCenterYOffset + slotHeight * 0.5f + titleGapAboveSlots + titleBlockHeight * 0.5f;
 
+        GameObject rowGo = CreateUiObject("Slots", parent);
+        RectTransform rowRt = rowGo.GetComponent<RectTransform>();
+        rowRt.anchorMin = new Vector2(0.5f, 0.5f);
+        rowRt.anchorMax = new Vector2(0.5f, 0.5f);
+        rowRt.pivot = new Vector2(0.5f, 0.5f);
+        rowRt.sizeDelta = new Vector2(rowWidth, slotHeight);
+        rowRt.anchoredPosition = new Vector2(0f, slotsCenterYOffset);
+
+        float startX = -rowWidth * 0.5f + slotWidth * 0.5f;
+        for (int i = 0; i < 3; i++)
+        {
+            float x = startX + i * (slotWidth + slotSpacing);
+            AddEmptySlot(rowGo.transform, i + 1, x, OnSaveSlotClicked);
+        }
+
         Font font = ResolveTitleFont();
         if (font == null) return;
 
-        font.RequestCharactersInTexture(saveSlotTitle, saveSlotTitleFontSize, FontStyle.Normal);
+        GameFont.RequestGlyphs(saveSlotTitle, saveSlotTitleFontSize, 22);
 
         GameObject titleGo = CreateUiObject("Title", parent);
-        titleGo.transform.SetAsLastSibling();
         RectTransform titleRt = titleGo.GetComponent<RectTransform>();
         titleRt.anchorMin = new Vector2(0.5f, 0.5f);
         titleRt.anchorMax = new Vector2(0.5f, 0.5f);
@@ -196,21 +210,7 @@ public class StartMenuBootstrap : MonoBehaviour
         titleText.verticalOverflow = VerticalWrapMode.Overflow;
         titleText.raycastTarget = false;
         titleText.supportRichText = false;
-
-        GameObject rowGo = CreateUiObject("Slots", parent);
-        RectTransform rowRt = rowGo.GetComponent<RectTransform>();
-        rowRt.anchorMin = new Vector2(0.5f, 0.5f);
-        rowRt.anchorMax = new Vector2(0.5f, 0.5f);
-        rowRt.pivot = new Vector2(0.5f, 0.5f);
-        rowRt.sizeDelta = new Vector2(rowWidth, slotHeight);
-        rowRt.anchoredPosition = new Vector2(0f, slotsCenterYOffset);
-
-        float startX = -rowWidth * 0.5f + slotWidth * 0.5f;
-        for (int i = 0; i < 3; i++)
-        {
-            float x = startX + i * (slotWidth + slotSpacing);
-            AddEmptySlot(rowGo.transform, i + 1, x, OnSaveSlotClicked);
-        }
+        titleGo.transform.SetAsLastSibling();
     }
 
     void AddEmptySlot(Transform parent, int slotIndex, float localX, UnityAction<int> onClick)

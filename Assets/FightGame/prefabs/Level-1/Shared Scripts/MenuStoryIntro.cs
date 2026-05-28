@@ -32,9 +32,10 @@ public class MenuStoryIntro : MonoBehaviour
 
     [Header("Тайминг")]
     [SerializeField] float charsPerSecond = 32f;
+    [SerializeField] float holdSpaceSpeedMultiplier = 4f;
     [SerializeField] float pauseAfterPeriod = 0.28f;
     [SerializeField] float pauseAfterParagraph = 0.55f;
-    [SerializeField] float pauseBeforeSceneLoad = 2.5f;
+    [SerializeField] float pauseBeforeSceneLoad = 0f;
     [SerializeField] float skipDelaySeconds = 0.4f;
     [SerializeField] bool allowSkip = true;
 
@@ -50,9 +51,33 @@ public class MenuStoryIntro : MonoBehaviour
     Coroutine _routine;
     string _targetScene;
     bool _isPlaying;
+    bool _forceSkipRequested;
     float _playStartTime;
+    AsyncOperation _sceneLoad;
+    string _preloadedSceneName;
 
     public bool IsPlaying => _isPlaying;
+
+    public void PreloadScene(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName))
+            return;
+
+        if (_sceneLoad != null && _preloadedSceneName == sceneName)
+            return;
+
+        _preloadedSceneName = sceneName;
+        _targetScene = sceneName;
+
+        if (!Application.CanStreamedLevelBeLoaded(sceneName))
+            return;
+
+        _sceneLoad = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
+        if (_sceneLoad == null)
+            return;
+
+        _sceneLoad.allowSceneActivation = false;
+    }
 
     public void Build(Transform canvasParent)
     {
@@ -166,44 +191,109 @@ public class MenuStoryIntro : MonoBehaviour
         if (_routine != null)
             StopCoroutine(_routine);
 
+        PreloadScene(sceneName);
         _routine = StartCoroutine(PlayRoutine(full));
     }
+
+    void Update()
+    {
+        if (!_isPlaying)
+            return;
+
+        if (WasForceSkipScenePressed())
+            _forceSkipRequested = true;
+    }
+
+    bool ShouldForceSkipScene() => _forceSkipRequested || WasForceSkipScenePressed();
 
     IEnumerator PlayRoutine(string full)
     {
         _isPlaying = true;
-        yield return null;
-        UpdateContentHeight();
+        _forceSkipRequested = false;
 
         var shown = new StringBuilder(full.Length);
+        int tailStart = FindFinaleStart(full);
 
         for (int i = 0; i < full.Length; i++)
         {
-            if (allowSkip && Time.unscaledTime - _playStartTime >= skipDelaySeconds && WasSkipPressed())
+            if (ShouldForceSkipScene())
             {
-                shown.Clear();
-                shown.Append(full);
-                break;
+                ActivateSceneNow();
+                yield break;
+            }
+
+            if (allowSkip && Time.unscaledTime - _playStartTime >= skipDelaySeconds && WasShowAllTextPressed())
+            {
+                ShowStoryText(full);
+                ActivateSceneNow();
+                yield break;
+            }
+
+            if (i >= tailStart)
+            {
+                shown.Append(full, i, full.Length - i);
+                ShowStoryText(shown.ToString());
+                ActivateSceneNow();
+                yield break;
             }
 
             char c = full[i];
             shown.Append(c);
-            _storyUi.text = shown.ToString();
-            UpdateContentHeight();
-            ScrollToLatestLine();
+            ShowStoryText(shown.ToString());
 
-            yield return new WaitForSecondsRealtime(DelayFor(c, full, i));
+            yield return WaitStoryDelay(GetCharDelay(c, full, i));
         }
 
-        _storyUi.text = full;
+        if (ShouldForceSkipScene())
+        {
+            ActivateSceneNow();
+            yield break;
+        }
+
+        ShowStoryText(full);
+        ActivateSceneNow();
+    }
+
+    IEnumerator WaitStoryDelay(float seconds)
+    {
+        if (seconds <= 0f)
+            yield break;
+
+        float end = Time.unscaledTime + seconds;
+        while (Time.unscaledTime < end)
+        {
+            if (ShouldForceSkipScene())
+                yield break;
+
+            yield return null;
+        }
+    }
+
+    void ShowStoryText(string text)
+    {
+        _storyUi.text = text;
         UpdateContentHeight();
         ScrollToLatestLine();
-        yield return null;
-        ScrollToLatestLine();
+    }
 
-        yield return new WaitForSecondsRealtime(pauseBeforeSceneLoad);
+    void ActivateSceneNow()
+    {
+        if (!_isPlaying)
+            return;
+
         _isPlaying = false;
 
+        if (_sceneLoad != null && _sceneLoad.progress >= 0.9f)
+        {
+            _sceneLoad.allowSceneActivation = true;
+            return;
+        }
+
+        LoadTargetSceneSync();
+    }
+
+    void LoadTargetSceneSync()
+    {
         if (!string.IsNullOrEmpty(_targetScene) && Application.CanStreamedLevelBeLoaded(_targetScene))
             SceneManager.LoadScene(_targetScene);
         else
@@ -227,9 +317,9 @@ public class MenuStoryIntro : MonoBehaviour
     static Font LoadStoryFont()
     {
         GameFont.Reload();
-        Font font = GameFont.Aventura;
+        Font font = GameFont.ResolveForText(DefaultStory, 32);
         if (font == null)
-            Debug.LogError("MenuStoryIntro: не найден ofont.ru_Aventura.ttf (prefabs/Menu или Resources/Fonts).");
+            Debug.LogError("MenuStoryIntro: не найден шрифт для текста истории (Aventura / LegacyRuntime).");
         return font;
     }
 
@@ -255,9 +345,23 @@ public class MenuStoryIntro : MonoBehaviour
         _scroll.verticalNormalizedPosition = 0f;
     }
 
+    float GetCharDelay(char c, string full, int index)
+    {
+        if (index >= full.Length - 1)
+            return 0f;
+
+        float delay = DelayFor(c, full, index);
+        if (IsSpaceHeld())
+            delay /= Mathf.Max(1f, holdSpaceSpeedMultiplier);
+        return delay;
+    }
+
     float DelayFor(char c, string full, int index)
     {
         float baseDelay = 1f / Mathf.Max(1f, charsPerSecond);
+
+        if (IsInLastParagraph(full, index))
+            return baseDelay;
 
         if (c == '\n')
         {
@@ -277,14 +381,62 @@ public class MenuStoryIntro : MonoBehaviour
         return baseDelay;
     }
 
-    static bool WasSkipPressed()
+    static int FindFinaleStart(string full)
     {
-        if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
+        int lastBreak = full.LastIndexOf("\n\n", System.StringComparison.Ordinal);
+        if (lastBreak <= 0)
+            return full.Length;
+
+        int prevBreak = full.LastIndexOf("\n\n", lastBreak - 1, System.StringComparison.Ordinal);
+        if (prevBreak < 0)
+            return lastBreak + 2;
+
+        return prevBreak + 2;
+    }
+
+    static bool IsInLastParagraph(string full, int index)
+    {
+        int paragraphStart = full.LastIndexOf("\n\n", System.StringComparison.Ordinal);
+        return paragraphStart >= 0 && index > paragraphStart + 1;
+    }
+
+    static bool IsSpaceHeld()
+    {
+        if (Input.GetKey(KeyCode.Space))
             return true;
 #if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null &&
-            (Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.enterKey.wasPressedThisFrame))
+        if (Keyboard.current != null && Keyboard.current.spaceKey.isPressed)
             return true;
+#endif
+        return false;
+    }
+
+    static bool WasShowAllTextPressed()
+    {
+        if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Return))
+            return true;
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current.enterKey.wasPressedThisFrame)
+            return true;
+#endif
+        return false;
+    }
+
+    static bool WasForceSkipScenePressed()
+    {
+        bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+        bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        if (ctrl && shift && Input.GetKeyDown(KeyCode.Space))
+            return true;
+
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null)
+        {
+            bool ctrlNew = Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed;
+            bool shiftNew = Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
+            if (ctrlNew && shiftNew && Keyboard.current.spaceKey.wasPressedThisFrame)
+                return true;
+        }
 #endif
         return false;
     }

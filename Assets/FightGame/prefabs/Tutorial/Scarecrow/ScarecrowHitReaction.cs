@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -43,12 +44,26 @@ public class ScarecrowHitReaction : MonoBehaviour
     bool _defeated;
     int _hitCount;
     Vector3 _baseScale;
+    bool _acceptHits = false;
+
+    /// <summary>Сколько ударов уже получено (для обучения и UI).</summary>
+    public int HitCount => _hitCount;
+    public bool AcceptHits
+    {
+        get => _acceptHits;
+        set => _acceptHits = value;
+    }
+
+    /// <summary>Вызывается после каждого удара: (чучело, текущий счётчик).</summary>
+    public static event Action<ScarecrowHitReaction, int> HitCountChanged;
 
     public bool RegisterHit()
     {
+        if (!_acceptHits) return false;
         if (_defeated) return true;
 
         _hitCount++;
+        HitCountChanged?.Invoke(this, _hitCount);
         if (_hitCount < hitsToDefeat) return false;
 
         TriggerDefeat();
@@ -56,6 +71,13 @@ public class ScarecrowHitReaction : MonoBehaviour
     }
 
     public bool IsDefeated => _defeated;
+
+    public void ResetHits()
+    {
+        _hitCount = 0;
+        _defeated = false;
+        HitCountChanged?.Invoke(this, _hitCount);
+    }
 
     public void PlayHitSound()
     {

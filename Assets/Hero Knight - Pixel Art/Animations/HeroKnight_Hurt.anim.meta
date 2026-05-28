@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b84a848c6b375be4db2efd3d7282155b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 165188
+  packageName: Hero Knight - Pixel Art
+  packageVersion: 1.2
+  assetPath: Assets/Hero Knight - Pixel Art/Animations/HeroKnight_Hurt.anim
+  uploadId: 447637

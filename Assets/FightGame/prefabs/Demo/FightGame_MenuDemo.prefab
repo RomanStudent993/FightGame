@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8844550011000000002}
   - component: {fileID: 8844550011000000003}
+  - component: {fileID: 8844550011000000004}
   m_Layer: 0
   m_Name: FightGame_MenuDemo
   m_TagString: Untagged
@@ -62,3 +63,25 @@ MonoBehaviour:
   slotSpacing: 52
   slotsCenterYOffset: -30
   titleGapAboveSlots: 32
+--- !u!114 &8844550011000000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8844550011000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4e5f6a7b8c90123456789abcdef0123, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MenuStoryIntro
+  loadingBackground: {fileID: -2914503216214332612, guid: 4537540603808214fb6e00226c449850, type: 3}
+  storyFontSize: 32
+  lineSpacing: 0.92
+  storyTextColor: {r: 0.94, g: 0.86, b: 0.62, a: 1}
+  charsPerSecond: 32
+  pauseAfterPeriod: 0.28
+  pauseAfterParagraph: 0.55
+  pauseBeforeSceneLoad: 0
+  skipDelaySeconds: 0.4
+  allowSkip: 1

@@ -2,17 +2,29 @@ using UnityEngine;
 
 /// <summary>
 /// Щит по ПКМ: блокирует урон только если враг с той стороны, куда смотрит персонаж (SpriteRenderer.flipX как у HeroKnight).
-/// После случайного числа успешных блоков (2 или 3) следующий удар пробивает щит: отдача, фиксированный урон <see cref="shieldBreakHpLoss"/> и звук прорыва, короткий локаут блока.
+/// После <see cref="blocksBeforeShieldBreak"/> успешных блоков подряд следующий удар пробивает щит: отдача, фиксированный урон <see cref="shieldBreakHpLoss"/> и звук прорыва.
+/// Если опустить щит (отпустить ПКМ при <see cref="requireMouseHeld"/>), счётчик блоков сбрасывается.
 /// </summary>
 public class PlayerShieldDefense : MonoBehaviour
 {
     [Tooltip("Если true — блок только пока зажата ПКМ (как IdleBlock в HeroKnight).")]
     public bool requireMouseHeld = true;
 
+    [Header("Отражение урона")]
+    [Tooltip("При успешном блоке часть входящего урона возвращается атакующему врагу.")]
+    public bool reflectDamageOnBlock = true;
+    [Tooltip("Доля входящего урона, наносимая врагу при блоке (1 = весь урон).")]
+    [Range(0f, 2f)]
+    public float reflectDamageMultiplier = 1f;
+    [Tooltip("Радиус поиска врага в точке удара (позиция атакующего).")]
+    public float reflectAttackerFindRadius = 0.9f;
+
     [Header("Прорыв щита")]
+    [Tooltip("Сколько ударов подряд по поднятому щиту выдерживает, прежде чем следующий пробьёт (3 = три блока, четвёртый удар — 40 HP).")]
+    public int blocksBeforeShieldBreak = 3;
     [Tooltip("Сколько секунд после прорыва щит не блокирует (ПКМ можно держать — урон не гасится).")]
     public float postBreakBlockLockout = 0.85f;
-    [Tooltip("HP при пробитии щита (удар после 2–3 успешных блоков).")]
+    [Tooltip("HP при пробитии щита (удар после серии блоков).")]
     public int shieldBreakHpLoss = 40;
 
     [Header("Звук")]
@@ -25,8 +37,8 @@ public class PlayerShieldDefense : MonoBehaviour
     SpriteRenderer spriteRenderer;
     AudioSource audioSource;
     private int blocksSuccessfullyStopped;
-    private int blocksAllowedBeforeBreak;
     private float blockLockoutUntil;
+    private bool wasShieldRaised;
 
     void Awake()
     {
@@ -36,14 +48,17 @@ public class PlayerShieldDefense : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
     }
 
-    void Start()
+    void Update()
     {
-        RollBlocksBeforeBreak();
+        bool raised = IsShieldRaised();
+        if (wasShieldRaised && !raised)
+            ResetBlockStreak();
+        wasShieldRaised = raised;
     }
 
-    void RollBlocksBeforeBreak()
+    void ResetBlockStreak()
     {
-        blocksAllowedBeforeBreak = Random.Range(2, 4);
+        blocksSuccessfullyStopped = 0;
     }
 
     /// <summary>Направление «вперёд» персонажа по горизонтали: +1 вправо, −1 влево (как m_facingDirection в HeroKnight).</summary>
@@ -82,6 +97,11 @@ public class PlayerShieldDefense : MonoBehaviour
     /// </summary>
     public bool AbsorbMeleeHitIfPossible(Vector2 attackerWorldPosition, int baseDamage, out int damageToApply, out bool brokeShieldThisHit)
     {
+        return AbsorbMeleeHitIfPossible(attackerWorldPosition, baseDamage, out damageToApply, out brokeShieldThisHit, allowReflectDamage: true);
+    }
+
+    public bool AbsorbMeleeHitIfPossible(Vector2 attackerWorldPosition, int baseDamage, out int damageToApply, out bool brokeShieldThisHit, bool allowReflectDamage)
+    {
         damageToApply = baseDamage;
         brokeShieldThisHit = false;
 
@@ -89,15 +109,17 @@ public class PlayerShieldDefense : MonoBehaviour
         if (!IsShieldRaised()) return false;
         if (!IsAttackerInShieldArc(attackerWorldPosition)) return false;
 
-        if (blocksSuccessfullyStopped < blocksAllowedBeforeBreak)
+        int need = Mathf.Max(1, blocksBeforeShieldBreak);
+        if (blocksSuccessfullyStopped < need)
         {
             blocksSuccessfullyStopped++;
             damageToApply = 0;
+            if (allowReflectDamage)
+                TryReflectDamageToAttacker(attackerWorldPosition, baseDamage);
             return true;
         }
 
-        blocksSuccessfullyStopped = 0;
-        RollBlocksBeforeBreak();
+        ResetBlockStreak();
         blockLockoutUntil = Time.time + postBreakBlockLockout;
         brokeShieldThisHit = true;
         damageToApply = Mathf.Max(1, shieldBreakHpLoss);
@@ -112,5 +134,40 @@ public class PlayerShieldDefense : MonoBehaviour
             audioSource.PlayOneShot(shieldBreakSound, shieldBreakSoundVolume);
         else
             AudioSource.PlayClipAtPoint(shieldBreakSound, transform.position, shieldBreakSoundVolume);
+    }
+
+    void TryReflectDamageToAttacker(Vector2 attackerWorldPosition, int incomingDamage)
+    {
+        if (!reflectDamageOnBlock || incomingDamage <= 0 || reflectDamageMultiplier <= 0f) return;
+
+        int reflected = Mathf.Max(1, Mathf.RoundToInt(incomingDamage * reflectDamageMultiplier));
+        Collider2D[] hits = Physics2D.OverlapCircleAll(attackerWorldPosition, reflectAttackerFindRadius);
+        SimpleHealth best = null;
+        float bestDistSq = float.MaxValue;
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider2D col = hits[i];
+            if (col == null) continue;
+            Transform root = col.transform.root;
+            if (root == transform.root) continue;
+            if (!root.CompareTag("Enemy")) continue;
+
+            SimpleHealth hp = col.GetComponentInParent<SimpleHealth>();
+            if (hp == null || hp.IsDead) continue;
+
+            float distSq = ((Vector2)hp.transform.position - attackerWorldPosition).sqrMagnitude;
+            if (distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                best = hp;
+            }
+        }
+
+        if (best == null || !best.TakeDamage(reflected)) return;
+
+        EnemyAI ai = best.GetComponent<EnemyAI>();
+        if (ai != null)
+            ai.RegisterHitImpactSlowdown();
     }
 }

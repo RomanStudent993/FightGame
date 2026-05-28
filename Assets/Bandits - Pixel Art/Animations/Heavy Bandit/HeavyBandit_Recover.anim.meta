@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 57b5ff720314017419be9944d9b0831c
+timeCreated: 1514705814
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 104130
+  packageName: Bandits - Pixel Art
+  packageVersion: 2.2
+  assetPath: Assets/Bandits - Pixel Art/Animations/Heavy Bandit/HeavyBandit_Recover.anim
+  uploadId: 384983

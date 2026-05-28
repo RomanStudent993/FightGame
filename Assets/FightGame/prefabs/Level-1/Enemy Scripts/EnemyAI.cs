@@ -144,6 +144,8 @@ public class EnemyAI : MonoBehaviour
     [Header("Прыжок: только с платформы игрока")]
     [Tooltip("Если вкл — не прыгает «просто потому что игрок выше по Y»: нужна опора под ногами игрока, заметно выше уровня ног врага.")]
     public bool platformJumpOnlyWhenPlayerOnElevatedSurface = true;
+    [Tooltip("Полностью отключает прыжки врага на платформы и к игроку.")]
+    public bool allowPlatformJumps = true;
     [Tooltip("Макс. |опорная поверхность − «ноги» игрока|, чтобы считать, что он стоит на найденном коллайдере.")]
     public float playerFeetPlatformContactSlop = 0.35f;
     [Tooltip("Мин. зазор: верх коллайдера под игроком выше низа коллайдера врага (иначе общий пол / один этаж).")]
@@ -244,7 +246,8 @@ public class EnemyAI : MonoBehaviour
 
         UpdatePlayerAbovePlatformTimer(dyPlayer);
 
-        bool climbIntent = playerAboveSince > 0f &&
+        bool climbIntent = allowPlatformJumps &&
+            playerAboveSince > 0f &&
             (Time.time - playerAboveSince) >= playerAbovePersistSeconds &&
             dyPlayer > playerAboveMinHeight;
 
@@ -514,6 +517,17 @@ public class EnemyAI : MonoBehaviour
         return !h.IsDead;
     }
 
+    bool IsLikelyPlayerTarget(Transform root)
+    {
+        if (root == null || !root.gameObject.activeInHierarchy) return false;
+        if (root.gameObject.scene != gameObject.scene) return false;
+        if (root.CompareTag("Player")) return true;
+        if (root.GetComponentInChildren<HeroKnight>(true) != null) return true;
+        if (root.GetComponentInChildren<PlayerAttackDamage>(true) != null) return true;
+        if (root.GetComponentInChildren<PlayerShieldDefense>(true) != null) return true;
+        return false;
+    }
+
     private void AcquireTarget()
     {
         Transform selfRoot = transform.root;
@@ -526,6 +540,7 @@ public class EnemyAI : MonoBehaviour
             Transform root = players[i].transform.root;
             if (root == selfRoot) continue;
             if (!IsAliveCombatTarget(root)) continue;
+            if (!IsLikelyPlayerTarget(root)) continue;
             if (!candidates.Contains(root)) candidates.Add(root);
         }
 
@@ -536,6 +551,7 @@ public class EnemyAI : MonoBehaviour
             Transform root = playerAttackScripts[i].transform.root;
             if (root == selfRoot) continue;
             if (!IsAliveCombatTarget(root)) continue;
+            if (!IsLikelyPlayerTarget(root)) continue;
             if (!candidates.Contains(root)) candidates.Add(root);
         }
 
@@ -546,6 +562,7 @@ public class EnemyAI : MonoBehaviour
             Transform root = heroes[i].transform.root;
             if (root == selfRoot) continue;
             if (!IsAliveCombatTarget(root)) continue;
+            if (!IsLikelyPlayerTarget(root)) continue;
             if (!candidates.Contains(root)) candidates.Add(root);
         }
 
@@ -560,6 +577,8 @@ public class EnemyAI : MonoBehaviour
                 if (!IsAliveCombatTarget(root)) continue;
                 string lowerName = root.name.ToLowerInvariant();
                 if (!lowerName.Contains("hero") && !lowerName.Contains("knight") && !lowerName.Contains("player"))
+                    continue;
+                if (!IsLikelyPlayerTarget(root))
                     continue;
                 if (!candidates.Contains(root)) candidates.Add(root);
             }
@@ -886,6 +905,8 @@ public class EnemyAI : MonoBehaviour
     bool TryPlatformJumpTowardPlayer(float dyPlayer, float distanceX, bool climbIntent, bool straightUnderGeometryOk)
     {
         lastPlatformJumpWasSideArc = false;
+        if (!allowPlatformJumps) return false;
+        if (jumpForce <= 0.01f) return false;
         if (playerAboveSince < 0f) return false;
         if (Time.time < nextPlatformJumpTime) return false;
         if (Time.time < dodgeLockUntil) return false;

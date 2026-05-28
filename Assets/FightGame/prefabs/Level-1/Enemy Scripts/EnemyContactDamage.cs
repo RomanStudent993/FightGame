@@ -5,6 +5,8 @@ public class EnemyContactDamage : MonoBehaviour
     public int damage = 10;
     public float damageCooldown = 0.8f;
     public bool triggerAttackAnimation = true;
+    [Tooltip("Если false, при блоке щитом этот враг не получает отражённый урон.")]
+    public bool reflectDamageToEnemyOnShieldBlock = true;
     [Tooltip("Короткая пауза перед первым ударом после контакта. Не применяется, если игрок в этот момент реально блокирует удар щитом (см. PlayerShieldDefense).")]
     public float thinkTimeBeforeFirstHit = 0.05f;
 
@@ -149,6 +151,25 @@ public class EnemyContactDamage : MonoBehaviour
             ai.RegisterHitImpactSlowdown();
     }
 
+    /// <summary>Игрок стоит на «голове» врага (платформа) — не бьём и не зацикливаем Attack.</summary>
+    bool IsPlayerStandingOnTop(Transform playerRoot)
+    {
+        if (playerRoot == null) return false;
+
+        Collider2D enemyCol = GetComponent<Collider2D>();
+        if (enemyCol == null) return false;
+
+        Collider2D playerCol = playerRoot.GetComponentInChildren<Collider2D>();
+        float playerFeetY = playerCol != null ? playerCol.bounds.min.y : playerRoot.position.y;
+        Bounds b = enemyCol.bounds;
+
+        if (playerFeetY < b.max.y - 0.25f)
+            return false;
+
+        float dx = Mathf.Abs(playerRoot.position.x - b.center.x);
+        return dx <= b.extents.x + 0.35f;
+    }
+
     private void TryDealDamage(Collider2D other)
     {
         if (other == null) return;
@@ -156,6 +177,10 @@ public class EnemyContactDamage : MonoBehaviour
         if (selfHp != null && selfHp.IsDead) return;
         if (!other.CompareTag("Player") && !other.transform.root.CompareTag("Player")) return;
         if (playerTouchCount <= 0 || combatEnteredAt < 0f) return;
+
+        Transform playerRoot = other.transform.root;
+        if (IsPlayerStandingOnTop(playerRoot))
+            return;
 
         EnemyAI ai = GetComponent<EnemyAI>();
         if (ai != null && !ai.CanDealContactMelee())
@@ -184,7 +209,7 @@ public class EnemyContactDamage : MonoBehaviour
             if (shield != null)
             {
                 int damageToApply = damage;
-                if (shield.AbsorbMeleeHitIfPossible(transform.position, damage, out damageToApply, out bool brokeShield))
+                if (shield.AbsorbMeleeHitIfPossible(transform.position, damage, out damageToApply, out bool brokeShield, reflectDamageToEnemyOnShieldBlock))
                 {
                     PlayShieldBlockSound();
                     ApplyKnockbackAwayFromSelf(playerRb, health.transform, shieldBlockKnockbackSpeed, shieldBlockInputLockDuration, shieldBlockKnockbackSlideDistance, shieldBlockInstantSlidePortion);

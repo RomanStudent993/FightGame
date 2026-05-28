@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d17aaa86cd2657645aeb53f6187f3bd8
+timeCreated: 1514705557
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 104130
+  packageName: Bandits - Pixel Art
+  packageVersion: 2.2
+  assetPath: Assets/Bandits - Pixel Art/Animations/Light Bandit/LightBandit_Attack.anim
+  uploadId: 384983

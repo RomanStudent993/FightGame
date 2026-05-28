@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: befd57bd047d00248b06ee05766f50f5
+timeCreated: 1514705781
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 104130
+  packageName: Bandits - Pixel Art
+  packageVersion: 2.2
+  assetPath: Assets/Bandits - Pixel Art/Animations/Heavy Bandit/HeavyBandit_Run.anim
+  uploadId: 384983

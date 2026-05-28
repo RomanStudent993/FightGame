@@ -253,7 +253,7 @@ MonoBehaviour:
   charsPerSecond: 32
   pauseAfterPeriod: 0.28
   pauseAfterParagraph: 0.55
-  pauseBeforeSceneLoad: 2.5
+  pauseBeforeSceneLoad: 0
   skipDelaySeconds: 0.4
   allowSkip: 1
 --- !u!1660057539 &9223372036854775807

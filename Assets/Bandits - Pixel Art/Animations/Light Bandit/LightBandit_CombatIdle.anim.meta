@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0abde2264c43213488401f2512bcc117
+timeCreated: 1514705520
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 104130
+  packageName: Bandits - Pixel Art
+  packageVersion: 2.2
+  assetPath: Assets/Bandits - Pixel Art/Animations/Light Bandit/LightBandit_CombatIdle.anim
+  uploadId: 384983

@@ -9,6 +9,7 @@ public class BossPlayerController : MonoBehaviour
     [SerializeField] float runAnimSpeed = 2f;
     [SerializeField] float attackAnimSpeed = 1.5f;
     [SerializeField] float deathAnimSpeed = 1.5f;
+    [SerializeField] float deathVisualLiftY = 0.14f;
     [SerializeField] float jumpForce = 13f;
     [SerializeField] float jumpAnimSpeed = 1f;
     [SerializeField, Range(1, 6)] int jumpImpulseFrame = 4;
@@ -53,6 +54,8 @@ public class BossPlayerController : MonoBehaviour
     int _jumpFrameIndex = -1;
     float _anchorCenterX;
     float _anchorFeetY;
+    float _deathAnchorCenterX;
+    float _deathAnchorFeetY;
     Vector2 _normalSpriteSize;
 
     void Awake()
@@ -74,6 +77,7 @@ public class BossPlayerController : MonoBehaviour
         AlignColliderToSprite();
         SnapFeetToGround();
         CacheAnchorFromSprite(_animSprite.sprite);
+        CacheDeathAnchorFromSprite(_animSprite.sprite);
     }
 
     void CacheNormalSpriteSize()
@@ -229,7 +233,6 @@ public class BossPlayerController : MonoBehaviour
         _deathHold = false;
         _deathAnchorReady = false;
         _animator.SetBool(IsMovingHash, false);
-        CacheAnchorFromSprite(_animSprite.sprite);
         _deathAnchorReady = true;
         _animator.Play(DeathStateHash, BaseLayer, 0f);
     }
@@ -347,12 +350,9 @@ public class BossPlayerController : MonoBehaviour
         if (stabilizeRunSprites && IsDeathActive())
         {
             if (!_deathAnchorReady)
-            {
-                CacheAnchorFromSprite(_animSprite.sprite);
                 _deathAnchorReady = true;
-            }
 
-            StabilizeVisual();
+            StabilizeDeathVisual();
         }
         else if (stabilizeRunSprites && moving && !IsAttacking())
         {
@@ -453,6 +453,16 @@ public class BossPlayerController : MonoBehaviour
         _anchorFeetY = b.min.y;
     }
 
+    void CacheDeathAnchorFromSprite(Sprite sprite)
+    {
+        if (sprite == null)
+            return;
+
+        Bounds b = sprite.bounds;
+        _deathAnchorCenterX = b.center.x;
+        _deathAnchorFeetY = b.min.y;
+    }
+
     void StabilizeVisual()
     {
         if (_visual == null || _sprite.sprite == null)
@@ -461,6 +471,17 @@ public class BossPlayerController : MonoBehaviour
         Bounds b = _sprite.sprite.bounds;
         float dx = _anchorCenterX - b.center.x;
         float dy = _anchorFeetY - b.min.y;
+        _visual.localPosition = new Vector3(dx, dy, 0f);
+    }
+
+    void StabilizeDeathVisual()
+    {
+        if (_visual == null || _sprite.sprite == null)
+            return;
+
+        Bounds b = _sprite.sprite.bounds;
+        float dx = _deathAnchorCenterX - b.center.x;
+        float dy = _deathAnchorFeetY - b.min.y + deathVisualLiftY;
         _visual.localPosition = new Vector3(dx, dy, 0f);
     }
 
