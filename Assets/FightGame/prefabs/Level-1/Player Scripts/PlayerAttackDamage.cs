@@ -49,6 +49,8 @@ public class PlayerAttackDamage : MonoBehaviour
 
     void Update()
     {
+        if (GamePauseController.BlocksGameplayInput)
+            return;
         if (Time.time < nextAttackTime) return;
 
         if (Input.GetMouseButtonDown(0))

@@ -228,11 +228,12 @@ public class TutorialQuestController : MonoBehaviour
 
     void RegisterProgress()
     {
-        if (_progress >= TargetCount) return;
+        int target = GetTargetCount(_step);
+        if (_progress >= target) return;
 
         _progress++;
         RefreshHud();
-        if (_progress >= TargetCount)
+        if (_progress >= target)
             AdvanceStep();
     }
 
@@ -255,6 +256,7 @@ public class TutorialQuestController : MonoBehaviour
                 break;
             case Step.Block:
                 _step = Step.Attack;
+                _lastBlockCounterVisible = false;
                 if (_scarecrow != null)
                 {
                     _scarecrow.ResetHits();
@@ -283,9 +285,15 @@ public class TutorialQuestController : MonoBehaviour
         string label = GetTaskLabel(_step);
         bool showCounter = ShouldShowBlockCounterInHud();
         _lastBlockCounterVisible = showCounter;
+        int target = GetTargetCount(_step);
         _taskUi.text = showCounter
-            ? $"{label} - {_progress}/{TargetCount}"
+            ? $"{label} - {_progress}/{target}"
             : label;
+    }
+
+    static int GetTargetCount(Step step)
+    {
+        return TargetCount;
     }
 
     static string GetTaskLabel(Step step)
@@ -392,6 +400,10 @@ public class TutorialQuestController : MonoBehaviour
 
     bool TryLoadNextScene()
     {
+        SaveProgressStage nextStage = GameSaveService.GetNextStageAfterScene(SceneManager.GetActiveScene().name);
+        if (nextStage != SaveProgressStage.None)
+            GameSaveService.AdvanceStage(nextStage);
+
         if (!string.IsNullOrEmpty(nextSceneName))
         {
             if (Application.CanStreamedLevelBeLoaded(nextSceneName))
@@ -425,7 +437,7 @@ public class TutorialQuestController : MonoBehaviour
 
     void BuildHud()
     {
-        string glyphSample = "Обучение Походите WASD Прыгните Пробел Заблокируйте щитом ПКМ Ударьте чучело ЛКМ 0/3 пройдено!";
+        string glyphSample = "Обучение Походите WASD Прыгните Пробел Заблокируйте щитом ПКМ Зелье регенерации Q Ударьте чучело ЛКМ 0/3 пройдено!";
         GameObject canvasGo = new GameObject("TutorialQuest_HUD", typeof(RectTransform));
         Canvas canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;

@@ -128,6 +128,9 @@ public class BossPlayerController : MonoBehaviour
 
     void Update()
     {
+        if (GamePauseController.BlocksGameplayInput)
+            return;
+
         if (JumpPressedThisFrame() && IsGrounded() && !IsPlayingAction())
             StartJump();
 

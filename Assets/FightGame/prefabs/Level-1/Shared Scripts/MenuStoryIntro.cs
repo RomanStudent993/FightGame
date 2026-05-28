@@ -13,16 +13,17 @@ public class MenuStoryIntro : MonoBehaviour
     static readonly Color StoryColor = new Color(0.94f, 0.86f, 0.62f, 1f);
 
     const string DefaultStory =
-        "Это случилось на рассвете.\n\n" +
-        "Гниющий Король пришел к стенам Альтариса не один. С ним была армия - рыцари без чести, самураи из мертвых земель, маги с пустыми глазами и гарпии, застилавшие небо.\n\n" +
-        "Замок пал за час.\n\n" +
-        "Королевская стража полегла у ворот. Совет магов исчез в зеленом пламени.\n\n" +
-        "Гниющий Король прошел через тронный зал, не останавливаясь. Ему не нужен был трон. Ему не нужна была корона.\n\n" +
-        "Ему нужна была принцесса.\n\n" +
-        "Теперь она в его руках. Никто не знает, что он с ней сделает.\n\n" +
-        "Но ты знаешь одно - ты должен помочь.\n\n" +
-        "Замок ждет. Принцесса ждет.\n\n" +
-        "А впереди - только враги.";
+        "Замок Альтарис горел три ночи.\n\n" +
+        "Ты видел зарево из своего дома в лесу.\n\n" +
+        "На четвёртую ночь огонь погас.\n\n" +
+        "Тишина страшнее пламени.\n\n" +
+        "Гниющий Король пришёл не один. С ним рыцари без лиц, самураи из сожжённых земель, маги, забывшие своё имя, и гарпии, которые помнят только голод.\n\n" +
+        "Принцесса - в башне. Живая. Пока что.\n\n" +
+        "Ты не герой. Ты даже не солдат.\n\n" +
+        "Ты - тот, кто живёт рядом с лесом и умеет молчать.\n\n" +
+        "Но меч когда-то держал.\n\n" +
+        "И чучело во дворе до сих пор помнит твои удары.\n\n" +
+        "Замок ждёт.";
 
     [Header("Оформление")]
     [SerializeField] Sprite loadingBackground;
@@ -35,7 +36,7 @@ public class MenuStoryIntro : MonoBehaviour
     [SerializeField] float holdSpaceSpeedMultiplier = 4f;
     [SerializeField] float pauseAfterPeriod = 0.28f;
     [SerializeField] float pauseAfterParagraph = 0.55f;
-    [SerializeField] float pauseBeforeSceneLoad = 0f;
+    [SerializeField] float pauseBeforeSceneLoad = 2.5f;
     [SerializeField] float skipDelaySeconds = 0.4f;
     [SerializeField] bool allowSkip = true;
 
@@ -57,6 +58,14 @@ public class MenuStoryIntro : MonoBehaviour
     string _preloadedSceneName;
 
     public bool IsPlaying => _isPlaying;
+
+    public Sprite LoadingBackground => loadingBackground;
+
+    public void EnsureLoadingBackground(Sprite sprite)
+    {
+        if (loadingBackground == null && sprite != null)
+            loadingBackground = sprite;
+    }
 
     public void PreloadScene(string sceneName)
     {
@@ -88,13 +97,10 @@ public class MenuStoryIntro : MonoBehaviour
         StretchFull(_panel.GetComponent<RectTransform>());
 
         _storyCanvas = _panel.AddComponent<Canvas>();
+        _storyCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
         _storyCanvas.overrideSorting = true;
         _storyCanvas.sortingOrder = 200;
         _panel.AddComponent<GraphicRaycaster>();
-
-        Canvas parentCanvas = canvasParent.GetComponent<Canvas>();
-        if (parentCanvas != null)
-            _storyCanvas.worldCamera = parentCanvas.worldCamera;
 
         GameObject bgGo = new GameObject("Background", typeof(RectTransform));
         bgGo.transform.SetParent(_panel.transform, false);
@@ -146,7 +152,7 @@ public class MenuStoryIntro : MonoBehaviour
 
         _storyUi = textGo.AddComponent<Text>();
         _storyUi.text = "";
-        _storyUi.font = LoadStoryFont();
+        _storyUi.font = ResolveStoryFont(DefaultStory);
         _storyUi.fontSize = storyFontSize;
         _storyUi.lineSpacing = lineSpacing;
         _storyUi.fontStyle = FontStyle.Normal;
@@ -156,6 +162,10 @@ public class MenuStoryIntro : MonoBehaviour
         _storyUi.verticalOverflow = VerticalWrapMode.Overflow;
         _storyUi.raycastTarget = false;
         _storyUi.supportRichText = false;
+
+        ContentSizeFitter textFitter = textGo.AddComponent<ContentSizeFitter>();
+        textFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        textFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         _panel.SetActive(false);
     }
@@ -181,10 +191,9 @@ public class MenuStoryIntro : MonoBehaviour
         _panel.SetActive(true);
         ShowBackground();
 
-        Font font = LoadStoryFont();
-        _storyUi.font = font;
-
         string full = GetFullStory();
+        Font font = ResolveStoryFont(full);
+        _storyUi.font = font;
         _storyUi.text = "";
         PrepareFontForStory(font, full, storyFontSize);
 
@@ -200,6 +209,7 @@ public class MenuStoryIntro : MonoBehaviour
         if (!_isPlaying)
             return;
 
+        // Ctrl+Shift+Пробел во время текста — скип истории (в меню без текста — удаление сохранений).
         if (WasForceSkipScenePressed())
             _forceSkipRequested = true;
     }
@@ -211,8 +221,10 @@ public class MenuStoryIntro : MonoBehaviour
         _isPlaying = true;
         _forceSkipRequested = false;
 
+        yield return null;
+        ShowStoryText("");
+
         var shown = new StringBuilder(full.Length);
-        int tailStart = FindFinaleStart(full);
 
         for (int i = 0; i < full.Length; i++)
         {
@@ -225,16 +237,7 @@ public class MenuStoryIntro : MonoBehaviour
             if (allowSkip && Time.unscaledTime - _playStartTime >= skipDelaySeconds && WasShowAllTextPressed())
             {
                 ShowStoryText(full);
-                ActivateSceneNow();
-                yield break;
-            }
-
-            if (i >= tailStart)
-            {
-                shown.Append(full, i, full.Length - i);
-                ShowStoryText(shown.ToString());
-                ActivateSceneNow();
-                yield break;
+                break;
             }
 
             char c = full[i];
@@ -251,6 +254,22 @@ public class MenuStoryIntro : MonoBehaviour
         }
 
         ShowStoryText(full);
+
+        float pauseEnd = Time.unscaledTime + Mathf.Max(0f, pauseBeforeSceneLoad);
+        while (Time.unscaledTime < pauseEnd)
+        {
+            if (ShouldForceSkipScene())
+            {
+                ActivateSceneNow();
+                yield break;
+            }
+
+            if (allowSkip && WasShowAllTextPressed())
+                break;
+
+            yield return null;
+        }
+
         ActivateSceneNow();
     }
 
@@ -302,9 +321,7 @@ public class MenuStoryIntro : MonoBehaviour
 
     string GetFullStory()
     {
-        string raw = string.IsNullOrWhiteSpace(storyText) || storyText.Length < DefaultStory.Length * 0.5f
-            ? DefaultStory
-            : storyText;
+        string raw = string.IsNullOrWhiteSpace(storyText) ? DefaultStory : storyText;
         return CompressStorySpacing(raw);
     }
 
@@ -314,12 +331,16 @@ public class MenuStoryIntro : MonoBehaviour
         return raw.Replace("\r\n", "\n").Replace("\n\n\n", "\n\n");
     }
 
-    static Font LoadStoryFont()
+    Font ResolveStoryFont(string full)
     {
         GameFont.Reload();
-        Font font = GameFont.ResolveForText(DefaultStory, 32);
+        Font font = GameFont.ResolveForText(full, storyFontSize);
+        if (font != null)
+            return font;
+
+        font = GameFont.BuiltInFallback;
         if (font == null)
-            Debug.LogError("MenuStoryIntro: не найден шрифт для текста истории (Aventura / LegacyRuntime).");
+            Debug.LogError("MenuStoryIntro: не найден шрифт для текста истории.");
         return font;
     }
 
@@ -360,9 +381,6 @@ public class MenuStoryIntro : MonoBehaviour
     {
         float baseDelay = 1f / Mathf.Max(1f, charsPerSecond);
 
-        if (IsInLastParagraph(full, index))
-            return baseDelay;
-
         if (c == '\n')
         {
             bool paragraphBreak = index > 0 && full[index - 1] == '\n';
@@ -379,25 +397,6 @@ public class MenuStoryIntro : MonoBehaviour
             return baseDelay + pauseAfterPeriod * 0.2f;
 
         return baseDelay;
-    }
-
-    static int FindFinaleStart(string full)
-    {
-        int lastBreak = full.LastIndexOf("\n\n", System.StringComparison.Ordinal);
-        if (lastBreak <= 0)
-            return full.Length;
-
-        int prevBreak = full.LastIndexOf("\n\n", lastBreak - 1, System.StringComparison.Ordinal);
-        if (prevBreak < 0)
-            return lastBreak + 2;
-
-        return prevBreak + 2;
-    }
-
-    static bool IsInLastParagraph(string full, int index)
-    {
-        int paragraphStart = full.LastIndexOf("\n\n", System.StringComparison.Ordinal);
-        return paragraphStart >= 0 && index > paragraphStart + 1;
     }
 
     static bool IsSpaceHeld()

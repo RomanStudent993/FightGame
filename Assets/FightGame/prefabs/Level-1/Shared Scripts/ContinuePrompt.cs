@@ -1,5 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 /// <summary>Единая надпись «продолжить» на экранах перехода между сценами.</summary>
 public static class ContinuePrompt
@@ -61,5 +64,26 @@ public static class ContinuePrompt
         label.verticalOverflow = VerticalWrapMode.Overflow;
         label.raycastTarget = false;
         label.text = Text;
+    }
+
+    public static bool WasAnyKeyPressed()
+    {
+        if (Input.anyKeyDown) return true;
+        if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2))
+            return true;
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) return true;
+        if (Mouse.current != null &&
+            (Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.rightButton.wasPressedThisFrame || Mouse.current.middleButton.wasPressedThisFrame))
+            return true;
+        if (Gamepad.current != null && (
+            Gamepad.current.buttonSouth.wasPressedThisFrame ||
+            Gamepad.current.buttonNorth.wasPressedThisFrame ||
+            Gamepad.current.buttonWest.wasPressedThisFrame ||
+            Gamepad.current.buttonEast.wasPressedThisFrame ||
+            Gamepad.current.startButton.wasPressedThisFrame))
+            return true;
+#endif
+        return false;
     }
 }

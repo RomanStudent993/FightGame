@@ -55,7 +55,6 @@ MonoBehaviour:
   saveSlotTitle: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u044F\u0447\u0435\u0439\u043A\u0443 \u0434\u043B\u044F \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F"
   saveSlotTitleFontSize: 40
   newGameSceneName: EducationDemo
-  continueSceneName: battle
   buttonWidth: 560
   buttonBottomMargin: 40
   buttonSpacing: 12

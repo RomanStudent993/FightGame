@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -19,6 +20,7 @@ public class StartMenuBootstrap : MonoBehaviour
 
     [Header("Фон")]
     [SerializeField] Sprite menuBackgroundSprite;
+    [SerializeField] Sprite loadingBackground;
 
     [Header("Кнопки меню")]
     [SerializeField] Sprite newGameButtonSprite;
@@ -31,12 +33,12 @@ public class StartMenuBootstrap : MonoBehaviour
     [Tooltip("ofont.ru_Aventura.ttf — подтягивается автоматически, если пусто.")]
     [SerializeField] Font titleFont;
     [SerializeField] string saveSlotTitle = "Выберите ячейку для сохранения";
+    [SerializeField] string loadSlotTitle = "Выберите сохранение";
     [Tooltip("Должен совпадать с Font Size в импорте ofont.ru_Aventura.ttf (Inspector).")]
     [SerializeField] int saveSlotTitleFontSize = 40;
 
     [Header("Сцены")]
     [SerializeField] string newGameSceneName = "EducationDemo";
-    [SerializeField] string continueSceneName = "battle";
 
     [Header("Вёрстка меню")]
     [SerializeField] float buttonWidth = 560f;
@@ -52,16 +54,33 @@ public class StartMenuBootstrap : MonoBehaviour
     GameObject _menuButtonsRoot;
     GameObject _saveSlotPanel;
     GameObject _menuBackgroundGo;
+    GameObject _slotsRowGo;
+    Text _saveSlotTitleText;
+    Button _continueButton;
+    Button _loadButton;
+    Button _newGameButton;
+    Button _exitButton;
     MenuStoryIntro _storyIntro;
     bool _saveSlotsVisible;
+    bool _loadTransitionActive;
+    SaveSlotPanelMode _slotPanelMode;
+
+    enum SaveSlotPanelMode
+    {
+        None,
+        NewGame,
+        Load
+    }
 
     void Awake()
     {
         GameFont.Reload();
+        GameSaveService.RestoreActiveSlotFromPrefs();
         titleFont = ResolveTitleFont();
 
         EnsureEventSystem();
         BuildUi();
+        RefreshSaveDependentButtons();
     }
 
     Font ResolveTitleFont()
@@ -74,7 +93,19 @@ public class StartMenuBootstrap : MonoBehaviour
 
     void Update()
     {
+        // Ctrl+Shift+Пробел во время текста истории обрабатывает MenuStoryIntro (скип).
         if (_storyIntro != null && _storyIntro.IsPlaying) return;
+
+        // Ctrl+Shift+Пробел в главном меню / панели слотов — удалить все сохранения.
+        if (!_loadTransitionActive && WasDeleteAllSavesPressed())
+        {
+            GameSaveService.DeleteAllSaves();
+            RefreshSaveDependentButtons();
+            if (_saveSlotsVisible)
+                RefreshSaveSlotPanel();
+            Debug.Log("GameSaveService: все сохранения удалены.");
+            return;
+        }
 
         if (!_saveSlotsVisible) return;
         if (WasEscapePressed())
@@ -133,33 +164,61 @@ public class StartMenuBootstrap : MonoBehaviour
         if (_storyIntro == null)
             _storyIntro = gameObject.AddComponent<MenuStoryIntro>();
 
+        _storyIntro.EnsureLoadingBackground(loadingBackground);
         _storyIntro.Build(canvasGo.transform);
     }
 
     void BuildMenuButtons(Transform parent)
     {
-        float bottom = buttonBottomMargin;
-
         if (exitButtonSprite != null)
-        {
-            AddSpriteButton(parent, "Exit", exitButtonSprite, bottom, QuitGame);
-            bottom += ButtonHeight(exitButtonSprite) + buttonSpacing;
-        }
-
-        if (continueButtonSprite != null)
-        {
-            AddSpriteButton(parent, "Continue", continueButtonSprite, bottom, OnContinue);
-            bottom += ButtonHeight(continueButtonSprite) + buttonSpacing;
-        }
-
-        if (downloadButtonSprite != null)
-        {
-            AddSpriteButton(parent, "Download", downloadButtonSprite, bottom, OnDownload);
-            bottom += ButtonHeight(downloadButtonSprite) + buttonSpacing;
-        }
+            _exitButton = AddSpriteButton(parent, "Exit", exitButtonSprite, 0f, QuitGame);
 
         if (newGameButtonSprite != null)
-            AddSpriteButton(parent, "NewGame", newGameButtonSprite, bottom, OnNewGame);
+            _newGameButton = AddSpriteButton(parent, "NewGame", newGameButtonSprite, 0f, OnNewGame);
+
+        if (downloadButtonSprite != null)
+            _loadButton = AddSpriteButton(parent, "Load", downloadButtonSprite, 0f, OnLoad);
+
+        if (continueButtonSprite != null)
+            _continueButton = AddSpriteButton(parent, "Continue", continueButtonSprite, 0f, OnContinue);
+
+        LayoutMenuButtons();
+    }
+
+    void LayoutMenuButtons()
+    {
+        float bottom = buttonBottomMargin;
+
+        if (_exitButton != null)
+        {
+            SetButtonBottom(_exitButton, bottom);
+            bottom += GetButtonHeight(_exitButton) + buttonSpacing;
+        }
+
+        Button[] middleButtons = GameSaveService.HasAnySave()
+            ? new[] { _newGameButton, _loadButton, _continueButton }
+            : new[] { _continueButton, _loadButton, _newGameButton };
+
+        for (int i = 0; i < middleButtons.Length; i++)
+        {
+            Button btn = middleButtons[i];
+            if (btn == null)
+                continue;
+
+            SetButtonBottom(btn, bottom);
+            bottom += GetButtonHeight(btn) + buttonSpacing;
+        }
+    }
+
+    static void SetButtonBottom(Button btn, float bottom)
+    {
+        RectTransform rt = btn.GetComponent<RectTransform>();
+        rt.anchoredPosition = new Vector2(0f, bottom);
+    }
+
+    static float GetButtonHeight(Button btn)
+    {
+        return btn.GetComponent<RectTransform>().sizeDelta.y;
     }
 
     void BuildSaveSlotPanel(Transform parent)
@@ -171,25 +230,19 @@ public class StartMenuBootstrap : MonoBehaviour
         float titleBlockHeight = Mathf.Max(80f, saveSlotTitleFontSize + 36f);
         float titleY = slotsCenterYOffset + slotHeight * 0.5f + titleGapAboveSlots + titleBlockHeight * 0.5f;
 
-        GameObject rowGo = CreateUiObject("Slots", parent);
-        RectTransform rowRt = rowGo.GetComponent<RectTransform>();
+        _slotsRowGo = CreateUiObject("Slots", parent);
+        RectTransform rowRt = _slotsRowGo.GetComponent<RectTransform>();
         rowRt.anchorMin = new Vector2(0.5f, 0.5f);
         rowRt.anchorMax = new Vector2(0.5f, 0.5f);
         rowRt.pivot = new Vector2(0.5f, 0.5f);
         rowRt.sizeDelta = new Vector2(rowWidth, slotHeight);
         rowRt.anchoredPosition = new Vector2(0f, slotsCenterYOffset);
 
-        float startX = -rowWidth * 0.5f + slotWidth * 0.5f;
-        for (int i = 0; i < 3; i++)
-        {
-            float x = startX + i * (slotWidth + slotSpacing);
-            AddEmptySlot(rowGo.transform, i + 1, x, OnSaveSlotClicked);
-        }
-
         Font font = ResolveTitleFont();
         if (font == null) return;
 
         GameFont.RequestGlyphs(saveSlotTitle, saveSlotTitleFontSize, 22);
+        GameFont.RequestGlyphs(loadSlotTitle, saveSlotTitleFontSize, 22);
 
         GameObject titleGo = CreateUiObject("Title", parent);
         RectTransform titleRt = titleGo.GetComponent<RectTransform>();
@@ -199,21 +252,47 @@ public class StartMenuBootstrap : MonoBehaviour
         titleRt.sizeDelta = new Vector2(1700f, titleBlockHeight);
         titleRt.anchoredPosition = new Vector2(0f, titleY);
 
-        Text titleText = titleGo.AddComponent<Text>();
-        titleText.text = saveSlotTitle;
-        titleText.font = font;
-        titleText.fontSize = saveSlotTitleFontSize;
-        titleText.fontStyle = FontStyle.Normal;
-        titleText.color = TitleColor;
-        titleText.alignment = TextAnchor.MiddleCenter;
-        titleText.horizontalOverflow = HorizontalWrapMode.Overflow;
-        titleText.verticalOverflow = VerticalWrapMode.Overflow;
-        titleText.raycastTarget = false;
-        titleText.supportRichText = false;
+        _saveSlotTitleText = titleGo.AddComponent<Text>();
+        _saveSlotTitleText.text = saveSlotTitle;
+        _saveSlotTitleText.font = font;
+        _saveSlotTitleText.fontSize = saveSlotTitleFontSize;
+        _saveSlotTitleText.fontStyle = FontStyle.Normal;
+        _saveSlotTitleText.color = TitleColor;
+        _saveSlotTitleText.alignment = TextAnchor.MiddleCenter;
+        _saveSlotTitleText.horizontalOverflow = HorizontalWrapMode.Overflow;
+        _saveSlotTitleText.verticalOverflow = VerticalWrapMode.Overflow;
+        _saveSlotTitleText.raycastTarget = false;
+        _saveSlotTitleText.supportRichText = false;
         titleGo.transform.SetAsLastSibling();
+
+        RefreshSaveSlotPanel();
     }
 
-    void AddEmptySlot(Transform parent, int slotIndex, float localX, UnityAction<int> onClick)
+    void RefreshSaveSlotPanel()
+    {
+        if (_slotsRowGo == null || emptySlotSprite == null)
+            return;
+
+        for (int i = _slotsRowGo.transform.childCount - 1; i >= 0; i--)
+            Destroy(_slotsRowGo.transform.GetChild(i).gameObject);
+
+        if (_saveSlotTitleText != null)
+            _saveSlotTitleText.text = _slotPanelMode == SaveSlotPanelMode.Load ? loadSlotTitle : saveSlotTitle;
+
+        float rowWidth = slotWidth * 3f + slotSpacing * 2f;
+        float startX = -rowWidth * 0.5f + slotWidth * 0.5f;
+        for (int i = 0; i < GameSaveService.SlotCount; i++)
+        {
+            int slotIndex = i + 1;
+            float x = startX + i * (slotWidth + slotSpacing);
+            bool occupied = GameSaveService.HasSave(slotIndex);
+            bool interactable = _slotPanelMode != SaveSlotPanelMode.Load || occupied;
+            SaveProgressStage stage = GameSaveService.GetStage(slotIndex);
+            AddSaveSlot(_slotsRowGo.transform, slotIndex, x, interactable, stage);
+        }
+    }
+
+    void AddSaveSlot(Transform parent, int slotIndex, float localX, bool interactable, SaveProgressStage stage)
     {
         Vector2 size = new Vector2(slotWidth, SlotHeight(emptySlotSprite));
 
@@ -238,10 +317,40 @@ public class StartMenuBootstrap : MonoBehaviour
         colors.normalColor = Color.white;
         colors.highlightedColor = new Color(0.93f, 0.93f, 0.93f, 1f);
         colors.pressedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
+        colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.55f);
         btn.colors = colors;
+        btn.interactable = interactable;
+
+        if (stage != SaveProgressStage.None)
+        {
+            Font font = ResolveTitleFont();
+            if (font != null)
+            {
+                string label = GameSaveService.GetStageDisplayName(stage);
+                GameFont.RequestGlyphs(label, 24, 22);
+
+                GameObject labelGo = CreateUiObject("Label", slotGo.transform);
+                RectTransform labelRt = labelGo.GetComponent<RectTransform>();
+                StretchFull(labelRt);
+                labelRt.offsetMin = new Vector2(12f, 12f);
+                labelRt.offsetMax = new Vector2(-12f, -12f);
+
+                Text labelText = labelGo.AddComponent<Text>();
+                labelText.text = label;
+                labelText.font = font;
+                labelText.fontSize = 24;
+                labelText.fontStyle = FontStyle.Normal;
+                labelText.color = TitleColor;
+                labelText.alignment = TextAnchor.MiddleCenter;
+                labelText.horizontalOverflow = HorizontalWrapMode.Wrap;
+                labelText.verticalOverflow = VerticalWrapMode.Overflow;
+                labelText.raycastTarget = false;
+                labelText.supportRichText = false;
+            }
+        }
 
         int captured = slotIndex;
-        btn.onClick.AddListener(() => onClick(captured));
+        btn.onClick.AddListener(() => OnSaveSlotClicked(captured));
     }
 
     float ButtonHeight(Sprite sprite)
@@ -258,7 +367,7 @@ public class StartMenuBootstrap : MonoBehaviour
         return slotWidth * aspect;
     }
 
-    void AddSpriteButton(Transform parent, string objectName, Sprite sprite, float bottomOffset, UnityAction onClick)
+    Button AddSpriteButton(Transform parent, string objectName, Sprite sprite, float bottomOffset, UnityAction onClick)
     {
         Vector2 size = new Vector2(buttonWidth, ButtonHeight(sprite));
 
@@ -286,13 +395,27 @@ public class StartMenuBootstrap : MonoBehaviour
         colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.7f);
         btn.colors = colors;
         btn.onClick.AddListener(onClick);
+        return btn;
     }
 
-    void OnNewGame() => ShowSaveSlots();
-
-    void ShowSaveSlots()
+    void RefreshSaveDependentButtons()
     {
+        bool hasSave = GameSaveService.HasAnySave();
+        if (_continueButton != null)
+            _continueButton.interactable = hasSave;
+        if (_loadButton != null)
+            _loadButton.interactable = hasSave;
+
+        LayoutMenuButtons();
+    }
+
+    void OnNewGame() => ShowSaveSlots(SaveSlotPanelMode.NewGame);
+
+    void ShowSaveSlots(SaveSlotPanelMode mode)
+    {
+        _slotPanelMode = mode;
         _saveSlotsVisible = true;
+        RefreshSaveSlotPanel();
         if (_menuButtonsRoot != null)
             _menuButtonsRoot.SetActive(false);
         if (_saveSlotPanel != null)
@@ -302,12 +425,14 @@ public class StartMenuBootstrap : MonoBehaviour
     void ShowMainMenu()
     {
         _saveSlotsVisible = false;
+        _slotPanelMode = SaveSlotPanelMode.None;
         if (_saveSlotPanel != null)
             _saveSlotPanel.SetActive(false);
         if (_menuButtonsRoot != null)
             _menuButtonsRoot.SetActive(true);
         if (_menuBackgroundGo != null)
             _menuBackgroundGo.SetActive(true);
+        RefreshSaveDependentButtons();
     }
 
     void HideMenuChrome()
@@ -329,6 +454,13 @@ public class StartMenuBootstrap : MonoBehaviour
 
     void OnSaveSlotClicked(int slotIndex)
     {
+        if (_slotPanelMode == SaveSlotPanelMode.Load)
+        {
+            LoadSaveFromSlot(slotIndex);
+            return;
+        }
+
+        GameSaveService.CreateNewGame(slotIndex);
         _saveSlotsVisible = false;
         HideMenuChrome();
 
@@ -338,11 +470,119 @@ public class StartMenuBootstrap : MonoBehaviour
             LoadScene(newGameSceneName);
     }
 
-    void OnContinue() => LoadScene(continueSceneName);
-
-    void OnDownload()
+    void LoadSaveFromSlot(int slotIndex)
     {
-        Debug.Log("Download — пока не реализовано.");
+        if (!GameSaveService.HasSave(slotIndex))
+            return;
+
+        GameSaveService.SetActiveSlot(slotIndex);
+        SaveProgressStage stage = GameSaveService.GetStage(slotIndex);
+        string sceneName = GameSaveService.GetSceneForStage(stage);
+        if (string.IsNullOrEmpty(sceneName))
+            return;
+
+        _saveSlotsVisible = false;
+        HideMenuChrome();
+        StartCoroutine(LoadSaveRoutine(sceneName, stage));
+    }
+
+    IEnumerator LoadSaveRoutine(string sceneName, SaveProgressStage stage)
+    {
+        yield return ShowMainPressAnyKeyScreen();
+
+        if (GameSaveService.ShouldPlayStoryIntro(stage) && _storyIntro != null)
+            _storyIntro.Play(sceneName);
+        else
+            LoadScene(sceneName);
+    }
+
+    IEnumerator ShowMainPressAnyKeyScreen()
+    {
+        _loadTransitionActive = true;
+
+        Canvas canvas = ContinuePrompt.CreateTransitionCanvas("LoadGamePrompt", 250);
+        Transform root = canvas.transform;
+
+        GameObject imgGo = CreateUiObject("LoadingImage", root);
+        StretchFull(imgGo.GetComponent<RectTransform>());
+        Image bg = imgGo.AddComponent<Image>();
+        bg.raycastTarget = true;
+        bg.type = Image.Type.Simple;
+        bg.preserveAspect = false;
+
+        Sprite loading = ResolveLoadingBackground();
+        if (loading != null)
+        {
+            bg.sprite = loading;
+            bg.color = Color.white;
+            if (loading.texture != null)
+                loading.texture.filterMode = FilterMode.Point;
+        }
+        else
+        {
+            bg.color = new Color(0.05f, 0.05f, 0.06f, 1f);
+        }
+
+        Text label = ContinuePrompt.CreateLabel(root);
+        label.gameObject.SetActive(true);
+
+        yield return null;
+
+        while (!ContinuePrompt.WasAnyKeyPressed())
+            yield return null;
+
+        if (canvas != null)
+            Destroy(canvas.gameObject);
+
+        _loadTransitionActive = false;
+    }
+
+    Sprite ResolveLoadingBackground()
+    {
+        if (loadingBackground != null)
+            return loadingBackground;
+
+        if (_storyIntro != null)
+            return _storyIntro.LoadingBackground;
+
+        MenuStoryIntro intro = GetComponent<MenuStoryIntro>();
+        return intro != null ? intro.LoadingBackground : null;
+    }
+
+    void OnContinue()
+    {
+        int slotIndex = GameSaveService.GetLastUsedSlot();
+        if (slotIndex < 0)
+            return;
+
+        LoadSaveFromSlot(slotIndex);
+    }
+
+    void OnLoad()
+    {
+        if (!GameSaveService.HasAnySave())
+            return;
+
+        ShowSaveSlots(SaveSlotPanelMode.Load);
+    }
+
+    static bool WasDeleteAllSavesPressed()
+    {
+        bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+        bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        if (ctrl && shift && Input.GetKeyDown(KeyCode.Space))
+            return true;
+
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null)
+        {
+            bool ctrlNew = Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed;
+            bool shiftNew = Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
+            if (ctrlNew && shiftNew && Keyboard.current.spaceKey.wasPressedThisFrame)
+                return true;
+        }
+#endif
+        return false;
     }
 
     static void LoadScene(string sceneName)

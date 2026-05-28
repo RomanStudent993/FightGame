@@ -66,6 +66,55 @@ public class DamagePopup : MonoBehaviour
         popup.StartCoroutine(popup.Run());
     }
 
+    public static void ShowHeal(Vector3 worldPosition, int amount)
+    {
+        if (amount <= 0) return;
+
+        worldPosition += new Vector3(Random.Range(-0.12f, 0.12f), 0f, 0f);
+
+        GameObject root = new GameObject("HealPopup");
+        root.transform.position = worldPosition;
+
+        Canvas canvas = root.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        canvas.sortingOrder = 500;
+
+        var scaler = root.AddComponent<CanvasScaler>();
+        scaler.dynamicPixelsPerUnit = 10f;
+
+        var group = root.AddComponent<CanvasGroup>();
+        group.blocksRaycasts = false;
+        group.interactable = false;
+
+        RectTransform canvasRt = root.GetComponent<RectTransform>();
+        canvasRt.sizeDelta = new Vector2(220f, 80f);
+        canvasRt.localScale = Vector3.one * 0.012f;
+
+        GameObject textGo = new GameObject("Value");
+        textGo.transform.SetParent(root.transform, false);
+        Text text = textGo.AddComponent<Text>();
+        text.text = "+" + amount;
+        text.color = new Color(0.35f, 0.95f, 0.35f, 1f);
+        text.fontSize = kFontSize;
+        text.alignment = TextAnchor.MiddleCenter;
+        Font font = ResolveFont();
+        text.font = font;
+        GameFont.RequestGlyphs(text.text, kFontSize, FontStyle.Bold);
+        text.fontStyle = FontStyle.Bold;
+        text.raycastTarget = false;
+
+        RectTransform textRt = text.GetComponent<RectTransform>();
+        textRt.anchorMin = Vector2.zero;
+        textRt.anchorMax = Vector2.one;
+        textRt.offsetMin = Vector2.zero;
+        textRt.offsetMax = Vector2.zero;
+
+        DamagePopup popup = root.AddComponent<DamagePopup>();
+        popup._group = group;
+        popup._startPos = worldPosition;
+        popup.StartCoroutine(popup.Run());
+    }
+
     static Font ResolveFont()
     {
         if (_cachedFont != null) return _cachedFont;

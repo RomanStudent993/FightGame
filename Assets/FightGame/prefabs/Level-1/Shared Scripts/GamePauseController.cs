@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 #if UNITY_EDITOR
@@ -6,27 +7,44 @@ using UnityEditor;
 #endif
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 #endif
 
-/// <summary>Пауза по Esc: остановка игры и фон main.png из главного меню.</summary>
+/// <summary>Пауза по Esc: фон main.png и кнопки как в главном меню.</summary>
 [DefaultExecutionOrder(10000)]
 public class GamePauseController : MonoBehaviour
 {
     const string MenuBackgroundResourcePath = "Menu/main";
+    const string ContinueButtonResourcePath = "Menu/button-continue";
+    const string ExitButtonResourcePath = "Menu/button-exit";
 #if UNITY_EDITOR
     const string EditorMenuBackgroundPath = "Assets/FightGame/prefabs/Menu/main.png";
+    const string EditorContinueButtonPath = "Assets/FightGame/prefabs/Menu/button-continue.png";
+    const string EditorExitButtonPath = "Assets/FightGame/prefabs/Menu/button-exit.png";
 #endif
+
+    const string MainMenuSceneName = "StartMenu";
 
     static GamePauseController _instance;
     static bool _sceneHookRegistered;
 
     [SerializeField] Sprite menuBackgroundSprite;
+    [SerializeField] Sprite continueButtonSprite;
+    [SerializeField] Sprite exitButtonSprite;
+    [SerializeField] float buttonWidth = 560f;
+    [SerializeField] float buttonBottomMargin = 320f;
+    [SerializeField] float buttonSpacing = 12f;
+    [SerializeField] float blockInputAfterUiClickSeconds = 0.2f;
 
     GameObject _pauseRoot;
     Image _pauseBackground;
     float _timeScaleBeforePause = 1f;
+    static float _blockGameplayInputUntilUnscaled;
 
     public static bool IsPaused => _instance != null && _instance._pauseRoot != null && _instance._pauseRoot.activeSelf;
+
+    public static bool BlocksGameplayInput =>
+        IsPaused || Time.unscaledTime < _blockGameplayInputUntilUnscaled;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void RegisterSceneHook()
@@ -76,7 +94,7 @@ public class GamePauseController : MonoBehaviour
         if (string.IsNullOrEmpty(sceneName))
             return true;
 
-        return sceneName == "StartMenu"
+        return sceneName == MainMenuSceneName
             || sceneName == "Menu"
             || sceneName.Contains("MenuDemo");
     }
@@ -90,6 +108,7 @@ public class GamePauseController : MonoBehaviour
         }
 
         _instance = this;
+        EnsureEventSystem();
         BuildPauseUi();
     }
 
@@ -125,6 +144,13 @@ public class GamePauseController : MonoBehaviour
         Canvas pauseCanvas = _pauseRoot.AddComponent<Canvas>();
         pauseCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
         pauseCanvas.sortingOrder = 500;
+
+        CanvasScaler scaler = _pauseRoot.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0.5f;
+
         _pauseRoot.AddComponent<GraphicRaycaster>();
 
         GameObject bgGo = new GameObject("MenuBackground", typeof(RectTransform));
@@ -147,50 +173,74 @@ public class GamePauseController : MonoBehaviour
         else
             Debug.LogWarning("GamePauseController: не найден main.png (Resources/Menu/main или prefabs/Menu/main.png).");
 
+        GameObject buttonsRoot = new GameObject("PauseButtons", typeof(RectTransform));
+        buttonsRoot.transform.SetParent(_pauseRoot.transform, false);
+        StretchFull(buttonsRoot.GetComponent<RectTransform>());
+        BuildPauseButtons(buttonsRoot.transform);
+
         _pauseRoot.SetActive(false);
     }
 
-    static Sprite ResolveMenuBackground()
+    void BuildPauseButtons(Transform parent)
     {
-        if (_instance != null && _instance.menuBackgroundSprite != null)
-            return _instance.menuBackgroundSprite;
+        Sprite continueSprite = ResolveContinueButton();
+        Sprite exitSprite = ResolveExitButton();
+        float bottom = buttonBottomMargin;
 
-        Sprite sprite = Resources.Load<Sprite>(MenuBackgroundResourcePath);
-        if (sprite != null)
-            return CacheBackground(sprite);
-
-        Sprite[] sprites = Resources.LoadAll<Sprite>(MenuBackgroundResourcePath);
-        if (sprites != null && sprites.Length > 0)
+        if (exitSprite != null)
         {
-            for (int i = 0; i < sprites.Length; i++)
-            {
-                if (sprites[i] != null && (sprites[i].name == "main_0" || sprites[i].name == "main"))
-                    return CacheBackground(sprites[i]);
-            }
-
-            return CacheBackground(sprites[0]);
+            AddSpriteButton(parent, "Exit", exitSprite, bottom, ExitToMainMenu);
+            bottom += ButtonHeight(exitSprite) + buttonSpacing;
         }
 
-#if UNITY_EDITOR
-        Object[] assets = AssetDatabase.LoadAllAssetsAtPath(EditorMenuBackgroundPath);
-        if (assets != null)
-        {
-            for (int i = 0; i < assets.Length; i++)
-            {
-                if (assets[i] is Sprite editorSprite)
-                    return CacheBackground(editorSprite);
-            }
-        }
-#endif
-
-        return null;
+        if (continueSprite != null)
+            AddSpriteButton(parent, "Continue", continueSprite, bottom, OnContinueClicked);
     }
 
-    static Sprite CacheBackground(Sprite sprite)
+    void OnContinueClicked()
     {
-        if (_instance != null)
-            _instance.menuBackgroundSprite = sprite;
-        return sprite;
+        BlockGameplayInputBriefly();
+        Resume();
+    }
+
+    Button AddSpriteButton(Transform parent, string objectName, Sprite sprite, float bottomOffset, UnityEngine.Events.UnityAction onClick)
+    {
+        Vector2 size = new Vector2(buttonWidth, ButtonHeight(sprite));
+
+        GameObject btnGo = new GameObject(objectName, typeof(RectTransform));
+        btnGo.transform.SetParent(parent, false);
+
+        RectTransform rt = btnGo.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0f);
+        rt.anchorMax = new Vector2(0.5f, 0f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.sizeDelta = size;
+        rt.anchoredPosition = new Vector2(0f, bottomOffset);
+
+        Image img = btnGo.AddComponent<Image>();
+        img.sprite = sprite;
+        img.type = Image.Type.Simple;
+        img.preserveAspect = true;
+        if (sprite.texture != null)
+            sprite.texture.filterMode = FilterMode.Point;
+
+        Button btn = btnGo.AddComponent<Button>();
+        btn.targetGraphic = img;
+        ColorBlock colors = btn.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(0.93f, 0.93f, 0.93f, 1f);
+        colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+        colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.7f);
+        btn.colors = colors;
+        btn.onClick.AddListener(onClick);
+        return btn;
+    }
+
+    float ButtonHeight(Sprite sprite)
+    {
+        if (sprite == null) return 0f;
+        float aspect = sprite.rect.height / Mathf.Max(1f, sprite.rect.width);
+        return buttonWidth * aspect;
     }
 
     void Pause()
@@ -226,6 +276,140 @@ public class GamePauseController : MonoBehaviour
         _pauseRoot.SetActive(false);
         Time.timeScale = _timeScaleBeforePause > 0f ? _timeScaleBeforePause : 1f;
         AudioListener.pause = false;
+    }
+
+    void ExitToMainMenu()
+    {
+        _blockGameplayInputUntilUnscaled = 0f;
+        Time.timeScale = 1f;
+        AudioListener.pause = false;
+
+        if (_pauseRoot != null)
+            _pauseRoot.SetActive(false);
+
+        if (Application.CanStreamedLevelBeLoaded(MainMenuSceneName))
+            SceneManager.LoadScene(MainMenuSceneName);
+        else
+            Debug.LogWarning($"GamePauseController: сцена «{MainMenuSceneName}» недоступна.");
+    }
+
+    void BlockGameplayInputBriefly()
+    {
+        float duration = Mathf.Max(0.05f, blockInputAfterUiClickSeconds);
+        _blockGameplayInputUntilUnscaled = Time.unscaledTime + duration;
+    }
+
+    static Sprite ResolveMenuBackground()
+    {
+        if (_instance != null && _instance.menuBackgroundSprite != null)
+            return _instance.menuBackgroundSprite;
+
+        Sprite sprite = Resources.Load<Sprite>(MenuBackgroundResourcePath);
+        if (sprite != null)
+            return CacheBackground(sprite);
+
+        Sprite[] sprites = Resources.LoadAll<Sprite>(MenuBackgroundResourcePath);
+        if (sprites != null && sprites.Length > 0)
+        {
+            for (int i = 0; i < sprites.Length; i++)
+            {
+                if (sprites[i] != null && (sprites[i].name == "main_0" || sprites[i].name == "main"))
+                    return CacheBackground(sprites[i]);
+            }
+
+            return CacheBackground(sprites[0]);
+        }
+
+#if UNITY_EDITOR
+        return CacheBackground(LoadSpriteFromAssetPath(EditorMenuBackgroundPath));
+#else
+        return null;
+#endif
+    }
+
+    Sprite ResolveContinueButton()
+    {
+        if (continueButtonSprite != null)
+            return continueButtonSprite;
+
+        continueButtonSprite = LoadButtonSprite(ContinueButtonResourcePath
+#if UNITY_EDITOR
+            , EditorContinueButtonPath
+#endif
+        );
+        return continueButtonSprite;
+    }
+
+    Sprite ResolveExitButton()
+    {
+        if (exitButtonSprite != null)
+            return exitButtonSprite;
+
+        exitButtonSprite = LoadButtonSprite(ExitButtonResourcePath
+#if UNITY_EDITOR
+            , EditorExitButtonPath
+#endif
+        );
+        return exitButtonSprite;
+    }
+
+    static Sprite LoadButtonSprite(string resourcePath
+#if UNITY_EDITOR
+        , string editorAssetPath
+#endif
+    )
+    {
+        Sprite sprite = Resources.Load<Sprite>(resourcePath);
+        if (sprite != null)
+            return sprite;
+
+        Sprite[] sprites = Resources.LoadAll<Sprite>(resourcePath);
+        if (sprites != null && sprites.Length > 0)
+            return sprites[0];
+
+#if UNITY_EDITOR
+        return LoadSpriteFromAssetPath(editorAssetPath);
+#else
+        return null;
+#endif
+    }
+
+#if UNITY_EDITOR
+    static Sprite LoadSpriteFromAssetPath(string assetPath)
+    {
+        Object[] assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+        if (assets == null)
+            return null;
+
+        for (int i = 0; i < assets.Length; i++)
+        {
+            if (assets[i] is Sprite editorSprite)
+                return editorSprite;
+        }
+
+        return null;
+    }
+#endif
+
+    static Sprite CacheBackground(Sprite sprite)
+    {
+        if (_instance != null && sprite != null)
+            _instance.menuBackgroundSprite = sprite;
+        return sprite;
+    }
+
+    static void EnsureEventSystem()
+    {
+        if (Object.FindAnyObjectByType<EventSystem>(FindObjectsInactive.Exclude) != null)
+            return;
+
+        GameObject es = new GameObject("EventSystem");
+        es.AddComponent<EventSystem>();
+#if ENABLE_INPUT_SYSTEM
+        es.AddComponent<InputSystemUIInputModule>();
+#else
+        es.AddComponent<StandaloneInputModule>();
+#endif
     }
 
     static bool WasEscapePressed()

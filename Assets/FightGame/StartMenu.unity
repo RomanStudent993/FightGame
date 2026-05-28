@@ -509,6 +509,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartMenuBootstrap
   menuBackgroundSprite: {fileID: -7783813424544337531, guid: 5e7cfbe7e23a7f044a857b10bd426eb8, type: 3}
+  loadingBackground: {fileID: -2914503216214332612, guid: 4537540603808214fb6e00226c449850, type: 3}
   newGameButtonSprite: {fileID: -1577471842124141534, guid: d00b2fa45a37f9140b4af91a8cca64b3, type: 3}
   downloadButtonSprite: {fileID: 1406558649799654085, guid: d4e9565b71b47364b804ab052dae5d26, type: 3}
   continueButtonSprite: {fileID: 4615209543915702287, guid: 8c684e0bb1a325e41a0d45b78895e486, type: 3}
@@ -518,7 +519,6 @@ MonoBehaviour:
   saveSlotTitle: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u044F\u0447\u0435\u0439\u043A\u0443 \u0434\u043B\u044F \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F"
   saveSlotTitleFontSize: 40
   newGameSceneName: EducationDemo
-  continueSceneName: battle
   buttonWidth: 560
   buttonBottomMargin: 40
   buttonSpacing: 12
@@ -545,7 +545,7 @@ MonoBehaviour:
   charsPerSecond: 32
   pauseAfterPeriod: 0.28
   pauseAfterParagraph: 0.55
-  pauseBeforeSceneLoad: 0
+  pauseBeforeSceneLoad: 2.5
   skipDelaySeconds: 0.4
   allowSkip: 1
 --- !u!1 &1291085692

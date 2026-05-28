@@ -69,6 +69,13 @@ public class SimpleHealth : MonoBehaviour
         currentHp = Mathf.Min(maxHp, currentHp + amount);
     }
 
+    /// <summary>Полное восстановление HP до maxHp.</summary>
+    public void RestoreFullHp()
+    {
+        if (isDead) return;
+        currentHp = maxHp;
+    }
+
     /// <returns>true если HP реально изменилось (урон принят)</returns>
     /// <param name="playDamageSound">false — без sound_damage (например при пробитии щита, где уже звук крита).</param>
     public bool TakeDamage(int damage, bool playDamageSound = true)

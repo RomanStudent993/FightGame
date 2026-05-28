@@ -11,15 +11,6 @@ public class HeroKnight : MonoBehaviour {
     [SerializeField] float      m_airWallCastDistance = 0.22f;
     [SerializeField] float      m_airStuckFallAssist = -3.5f;
     [SerializeField] float      m_airStuckTime = 0.06f;
-    [SerializeField] int        m_healAmount = 65;
-    [Tooltip("Восстановление HP только если Heal доиграл почти до конца; при прерывании (прыжок и т.д.) — без отхила.")]
-    [SerializeField] [Range(0f, 1f)] float healRestoreMinNormalizedProgress = 0.97f;
-    [Tooltip("Восстановление HP в конце клипа Heal (при выходе из состояния), а не в начале.")]
-    bool m_healPending;
-    bool m_wasInHealState;
-    bool m_healSawHealAnimatorState;
-    float m_healRequestTime;
-    float m_healMaxNormalizedInHealState;
     [Tooltip("Размер только картинки в анимации Heal (меньше 1 — мельче, как у idle).")]
     [SerializeField] float healVisualScale = 0.72f;
     [Tooltip("Сдвиг копии спрайта по Y на всём Heal (положительное — чуть вверх; при scale < 1 часто «оседает» вниз без этого).")]
@@ -88,6 +79,8 @@ public class HeroKnight : MonoBehaviour {
     {
         if (m_health != null && m_health.IsDead)
             return;
+        if (GamePauseController.BlocksGameplayInput)
+            return;
 
         m_inputX = Input.GetAxis("Horizontal");
 
@@ -132,10 +125,6 @@ public class HeroKnight : MonoBehaviour {
         {
             m_animator.SetBool("noBlood", m_noBlood);
             m_animator.SetTrigger("Death");
-        }
-        else if (Input.GetKeyDown(KeyCode.Q))
-        {
-            TryHealInstant();
         }
         else if(Input.GetMouseButtonDown(0) && m_timeSinceAttack > 0.25f && !m_rolling)
         {
@@ -292,9 +281,6 @@ public class HeroKnight : MonoBehaviour {
 
     void LateUpdate()
     {
-        if (m_health == null || !m_health.IsDead)
-            ProcessHealHpAtEndOfAnimation();
-
         if (m_spriteDrive == null || m_spriteVisual == null) return;
 
         m_spriteVisual.sprite = m_spriteDrive.sprite;
@@ -303,10 +289,11 @@ public class HeroKnight : MonoBehaviour {
         m_spriteVisual.drawMode = m_spriteDrive.drawMode;
         m_spriteVisual.size = m_spriteDrive.size;
 
+        Sprite sprite = m_spriteDrive.sprite;
         float y = 0f;
         float sc = 1f;
         float x = 0f;
-        if (m_animator != null)
+        if (m_animator != null && sprite != null)
         {
             AnimatorStateInfo s = m_animator.GetCurrentAnimatorStateInfo(0);
             if (s.IsName("Heal"))
@@ -319,8 +306,7 @@ public class HeroKnight : MonoBehaviour {
                     float tInClip = phase * s.length;
                     float w0 = Mathf.Min(healSecondFrameWindowStart, healSecondFrameWindowEnd);
                     float w1 = Mathf.Max(healSecondFrameWindowStart, healSecondFrameWindowEnd);
-                    float face = (m_spriteDrive != null && m_spriteDrive.flipX) ? -1f : 1f;
-                    // Сначала окно 2-го кадра, иначе «первая фаза» до max(настройка, w0) — без разрыва на 0 между ~0.14 с и w0.
+                    float face = m_spriteDrive.flipX ? -1f : 1f;
                     if (tInClip >= w0 && tInClip < w1)
                         x = healSecondFrameOffsetX * face;
                     else if (tInClip < Mathf.Max(healFirstFrameOffsetSeconds, w0))
@@ -331,57 +317,6 @@ public class HeroKnight : MonoBehaviour {
 
         m_spriteVisualTransform.localPosition = new Vector3(x, y, 0f);
         m_spriteVisualTransform.localScale = new Vector3(sc, sc, 1f);
-    }
-
-    void ProcessHealHpAtEndOfAnimation()
-    {
-        if (m_animator == null || m_health == null)
-            return;
-
-        bool inHeal = m_animator.GetCurrentAnimatorStateInfo(0).IsName("Heal");
-        if (inHeal)
-        {
-            m_healSawHealAnimatorState = true;
-            if (m_healPending)
-            {
-                AnimatorStateInfo s = m_animator.GetCurrentAnimatorStateInfo(0);
-                float n = s.normalizedTime;
-                if (n > 1f && !s.loop)
-                    n = 1f;
-                m_healMaxNormalizedInHealState = Mathf.Max(m_healMaxNormalizedInHealState, Mathf.Clamp01(n));
-            }
-        }
-
-        if (m_healPending && !m_healSawHealAnimatorState && Time.time - m_healRequestTime > 1.25f)
-            m_healPending = false;
-
-        if (m_healPending && m_wasInHealState && !inHeal)
-        {
-            if (!m_health.IsDead && m_healMaxNormalizedInHealState >= healRestoreMinNormalizedProgress)
-                m_health.RestoreHp(m_healAmount);
-            m_healPending = false;
-            m_healSawHealAnimatorState = false;
-            m_healMaxNormalizedInHealState = 0f;
-        }
-
-        m_wasInHealState = inHeal;
-    }
-
-    void TryHealInstant()
-    {
-        if (m_health == null || m_health.IsDead || m_rolling)
-            return;
-        if (m_healPending)
-            return;
-        m_healPending = true;
-        m_healSawHealAnimatorState = false;
-        m_healMaxNormalizedInHealState = 0f;
-        m_healRequestTime = Time.time;
-        if (m_animator != null)
-        {
-            m_animator.ResetTrigger("Heal");
-            m_animator.Play("Heal", 0, 0f);
-        }
     }
 
     void AE_SlideDust()

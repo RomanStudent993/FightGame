@@ -162,6 +162,10 @@ public class MissionObjectiveHud : MonoBehaviour
 
     bool TryLoadNextScene()
     {
+        SaveProgressStage nextStage = GameSaveService.GetNextStageAfterScene(SceneManager.GetActiveScene().name);
+        if (nextStage != SaveProgressStage.None)
+            GameSaveService.AdvanceStage(nextStage);
+
         // Для перехода из Level-1 в Level-2 грузим целевую сцену напрямую по пути из Build Settings.
         // Это исключает попадание в другой scene entry с таким же именем.
         if (!string.IsNullOrEmpty(nextScenePath) && Application.CanStreamedLevelBeLoaded(nextScenePath))
