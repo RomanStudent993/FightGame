@@ -433,7 +433,7 @@ Transform:
   m_GameObject: {fileID: 150742893}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.0011, y: -1.014, z: 0}
+  m_LocalPosition: {x: -0.0011, y: -0.983, z: 0}
   m_LocalScale: {x: 20.920353, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2052,7 +2052,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4421916584583926758, guid: 070b11c7f31e52240b9f202591bff766, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.57
+      value: -0.551
       objectReference: {fileID: 0}
     - target: {fileID: 4421916584583926758, guid: 070b11c7f31e52240b9f202591bff766, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2217,8 +2217,8 @@ Transform:
   m_GameObject: {fileID: 1162636442}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3.99, z: 0}
-  m_LocalScale: {x: 1.3857391, y: 1.32132, z: 1}
+  m_LocalPosition: {x: 0, y: 4.0071, z: 0}
+  m_LocalScale: {x: 1.3857391, y: 1.3258125, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -2424,7 +2424,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 781210119152199698, guid: 155f3b62d9876bf47840f9beb01b2bc4, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.57
+      value: -0.555
       objectReference: {fileID: 0}
     - target: {fileID: 781210119152199698, guid: 155f3b62d9876bf47840f9beb01b2bc4, type: 3}
       propertyPath: m_LocalPosition.z
@@ -3795,7 +3795,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 97637f82ac2751143adb93f9bd09556e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleIntroController
   closeOrthoSize: 1.35
   closeFocusHeightFromFeet: 0.82
@@ -3806,6 +3806,9 @@ MonoBehaviour:
   holdAfterEnemyAttack: 0.38
   countdownStepDuration: 0.65
   countdownFontSize: 96
+  enemyIntroAttackAnimSpeed: 1
+  enemyIntroAttackExitNormalized: 0.95
+  enemyIntroAttackMinHold: 0
   finalCameraPosition: {x: 0, y: 4.07, z: -10}
   finalOrthoSize: 5
 --- !u!114 &3847291054

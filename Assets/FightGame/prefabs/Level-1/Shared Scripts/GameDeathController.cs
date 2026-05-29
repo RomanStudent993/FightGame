@@ -430,27 +430,7 @@ public class GameDeathController : MonoBehaviour
         if (menuBackgroundSprite != null)
             return menuBackgroundSprite;
 
-        Sprite sprite = Resources.Load<Sprite>(MenuBackgroundResourcePath);
-        if (sprite != null)
-            return menuBackgroundSprite = sprite;
-
-        Sprite[] sprites = Resources.LoadAll<Sprite>(MenuBackgroundResourcePath);
-        if (sprites != null && sprites.Length > 0)
-        {
-            for (int i = 0; i < sprites.Length; i++)
-            {
-                if (sprites[i] != null && (sprites[i].name == "main_0" || sprites[i].name == "main"))
-                    return menuBackgroundSprite = sprites[i];
-            }
-
-            return menuBackgroundSprite = sprites[0];
-        }
-
-#if UNITY_EDITOR
-        return menuBackgroundSprite = LoadSpriteFromAssetPath(EditorMenuBackgroundPath);
-#else
-        return null;
-#endif
+        return menuBackgroundSprite = MenuUiAssets.GetMainBackground();
     }
 
     Sprite ResolveReturnButton()

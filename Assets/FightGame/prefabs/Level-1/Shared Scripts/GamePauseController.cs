@@ -14,11 +14,9 @@ using UnityEngine.InputSystem.UI;
 [DefaultExecutionOrder(10000)]
 public class GamePauseController : MonoBehaviour
 {
-    const string MenuBackgroundResourcePath = "Menu/main";
     const string ContinueButtonResourcePath = "Menu/button-continue";
     const string ExitButtonResourcePath = "Menu/button-exit";
 #if UNITY_EDITOR
-    const string EditorMenuBackgroundPath = "Assets/FightGame/prefabs/Menu/main.png";
     const string EditorContinueButtonPath = "Assets/FightGame/prefabs/Menu/button-continue.png";
     const string EditorExitButtonPath = "Assets/FightGame/prefabs/Menu/button-exit.png";
 #endif
@@ -166,15 +164,7 @@ public class GamePauseController : MonoBehaviour
         _pauseBackground.preserveAspect = false;
         _pauseBackground.color = Color.white;
 
-        Sprite bg = ResolveMenuBackground();
-        if (bg != null)
-        {
-            _pauseBackground.sprite = bg;
-            if (bg.texture != null)
-                bg.texture.filterMode = FilterMode.Point;
-        }
-        else
-            Debug.LogWarning("GamePauseController: не найден main.png (Resources/Menu/main или prefabs/Menu/main.png).");
+        ApplyMenuBackground(_pauseBackground);
 
         GameObject buttonsRoot = new GameObject("PauseButtons", typeof(RectTransform));
         buttonsRoot.transform.SetParent(_pauseRoot.transform, false);
@@ -252,15 +242,7 @@ public class GamePauseController : MonoBehaviour
             BuildPauseUi();
 
         if (_pauseBackground != null && _pauseBackground.sprite == null)
-        {
-            Sprite bg = ResolveMenuBackground();
-            if (bg != null)
-            {
-                _pauseBackground.sprite = bg;
-                if (bg.texture != null)
-                    bg.texture.filterMode = FilterMode.Point;
-            }
-        }
+            ApplyMenuBackground(_pauseBackground);
 
         if (IsPaused)
             return;
@@ -308,32 +290,30 @@ public class GamePauseController : MonoBehaviour
         _blockGameplayInputUntilUnscaled = Time.unscaledTime + duration;
     }
 
+    static void ApplyMenuBackground(Image target)
+    {
+        if (target == null)
+            return;
+
+        Sprite bg = ResolveMenuBackground();
+        if (bg == null)
+        {
+            Debug.LogWarning("GamePauseController: не найден main.png (Resources/Menu/main).");
+            return;
+        }
+
+        target.sprite = bg;
+        if (bg.texture != null)
+            bg.texture.filterMode = FilterMode.Point;
+    }
+
     static Sprite ResolveMenuBackground()
     {
         if (_instance != null && _instance.menuBackgroundSprite != null)
             return _instance.menuBackgroundSprite;
 
-        Sprite sprite = Resources.Load<Sprite>(MenuBackgroundResourcePath);
-        if (sprite != null)
-            return CacheBackground(sprite);
-
-        Sprite[] sprites = Resources.LoadAll<Sprite>(MenuBackgroundResourcePath);
-        if (sprites != null && sprites.Length > 0)
-        {
-            for (int i = 0; i < sprites.Length; i++)
-            {
-                if (sprites[i] != null && (sprites[i].name == "main_0" || sprites[i].name == "main"))
-                    return CacheBackground(sprites[i]);
-            }
-
-            return CacheBackground(sprites[0]);
-        }
-
-#if UNITY_EDITOR
-        return CacheBackground(LoadSpriteFromAssetPath(EditorMenuBackgroundPath));
-#else
-        return null;
-#endif
+        Sprite sprite = MenuUiAssets.GetMainBackground();
+        return CacheBackground(sprite);
     }
 
     Sprite ResolveContinueButton()
