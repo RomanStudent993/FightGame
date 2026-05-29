@@ -503,7 +503,7 @@ public class StartMenuBootstrap : MonoBehaviour
     {
         yield return ShowMainPressAnyKeyScreen();
 
-        if (GameSaveService.ShouldPlayStoryIntro(stage) && _storyIntro != null)
+        if (GameSaveService.ShouldPlayStoryIntro(stage, sceneName) && _storyIntro != null)
             _storyIntro.Play(sceneName);
         else
             LoadScene(sceneName);

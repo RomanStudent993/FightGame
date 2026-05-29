@@ -13,17 +13,11 @@ public class MenuStoryIntro : MonoBehaviour
     static readonly Color StoryColor = new Color(0.94f, 0.86f, 0.62f, 1f);
 
     const string DefaultStory =
-        "Замок Альтарис горел три ночи.\n\n" +
-        "Ты видел зарево из своего дома в лесу.\n\n" +
-        "На четвёртую ночь огонь погас.\n\n" +
-        "Тишина страшнее пламени.\n\n" +
-        "Гниющий Король пришёл не один. С ним рыцари без лиц, самураи из сожжённых земель, маги, забывшие своё имя, и гарпии, которые помнят только голод.\n\n" +
-        "Принцесса - в башне. Живая. Пока что.\n\n" +
-        "Ты не герой. Ты даже не солдат.\n\n" +
-        "Ты - тот, кто живёт рядом с лесом и умеет молчать.\n\n" +
-        "Но меч когда-то держал.\n\n" +
-        "И чучело во дворе до сих пор помнит твои удары.\n\n" +
-        "Замок ждёт.";
+        "Рассвет ещё не занялся, когда к стенам Альтариса подошёл Гниющий Король. С ним - армия, которой не должно быть на свете: рыцари без знамён, воины из выжженных земель, маги с выгоревшими глазами, а небо затянули крылья гарпий.\n\n" +
+        "Замок пал за час. Стража легла у ворот. Совет магов пропал в зелёном пламени.\n\n" +
+        "Король прошёл через тронный зал, не глядя на престол. Ему не нужна была власть. Только она.\n\n" +
+        "Теперь принцесса в его руках. Что ждёт её дальше - никто не скажет. Но ты знаешь: стоять нельзя.\n\n" +
+        "Стены ещё дымятся. Она ждёт. А впереди - только враги.";
 
     [Header("Оформление")]
     [SerializeField] Sprite loadingBackground;
@@ -39,9 +33,6 @@ public class MenuStoryIntro : MonoBehaviour
     [SerializeField] float pauseBeforeSceneLoad = 2.5f;
     [SerializeField] float skipDelaySeconds = 0.4f;
     [SerializeField] bool allowSkip = true;
-
-    [TextArea(12, 24)]
-    [SerializeField] string storyText = DefaultStory;
 
     GameObject _panel;
     Canvas _storyCanvas;
@@ -319,11 +310,7 @@ public class MenuStoryIntro : MonoBehaviour
             Debug.LogWarning($"MenuStoryIntro: сцена «{_targetScene}» недоступна.");
     }
 
-    string GetFullStory()
-    {
-        string raw = string.IsNullOrWhiteSpace(storyText) ? DefaultStory : storyText;
-        return CompressStorySpacing(raw);
-    }
+    string GetFullStory() => CompressStorySpacing(DefaultStory);
 
     static string CompressStorySpacing(string raw)
     {

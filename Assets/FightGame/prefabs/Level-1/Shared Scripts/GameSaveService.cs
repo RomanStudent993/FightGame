@@ -139,7 +139,14 @@ public static class GameSaveService
         }
     }
 
-    public static bool ShouldPlayStoryIntro(SaveProgressStage stage) => stage == SaveProgressStage.Tutorial;
+    public static bool ShouldPlayStoryIntro(SaveProgressStage stage, string sceneName = null)
+    {
+        if (stage == SaveProgressStage.Tutorial)
+            return true;
+
+        return !string.IsNullOrEmpty(sceneName)
+            && sceneName == "EducationDemo";
+    }
 
     public static string GetStageDisplayName(SaveProgressStage stage)
     {
