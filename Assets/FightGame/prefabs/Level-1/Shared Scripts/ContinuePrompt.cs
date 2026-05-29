@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
@@ -13,6 +14,13 @@ public static class ContinuePrompt
     static readonly Color LabelColor = new Color(1f, 0.92f, 0.35f, 1f);
     static readonly Vector2 AnchorPosition = new Vector2(-24f, 24f);
     static readonly Vector2 Size = new Vector2(560f, 36f);
+
+    public static bool IsLevelTransitionActive { get; private set; }
+
+    public static void SetLevelTransitionActive(bool active)
+    {
+        IsLevelTransitionActive = active;
+    }
 
     public static Canvas CreateTransitionCanvas(string name, int sortingOrder)
     {
@@ -68,6 +76,14 @@ public static class ContinuePrompt
 
     public static bool WasAnyKeyPressed()
     {
+        return WasContinueKeyPressed();
+    }
+
+    public static bool WasContinueKeyPressed()
+    {
+        if (WasEscapePressed())
+            return false;
+
         if (Input.anyKeyDown) return true;
         if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2))
             return true;
@@ -82,6 +98,47 @@ public static class ContinuePrompt
             Gamepad.current.buttonWest.wasPressedThisFrame ||
             Gamepad.current.buttonEast.wasPressedThisFrame ||
             Gamepad.current.startButton.wasPressedThisFrame))
+            return true;
+#endif
+        return false;
+    }
+
+    public static IEnumerator WaitForSecondsRealtimePauseAware(float seconds)
+    {
+        float elapsed = 0f;
+        float duration = Mathf.Max(0f, seconds);
+        while (elapsed < duration)
+        {
+            yield return WaitForUnpausedFrame();
+            if (!GamePauseController.IsPaused)
+                elapsed += Time.unscaledDeltaTime;
+        }
+    }
+
+    public static IEnumerator WaitUntilContinuePressedPauseAware()
+    {
+        while (true)
+        {
+            yield return WaitForUnpausedFrame();
+            if (GamePauseController.IsPaused)
+                continue;
+            if (WasContinueKeyPressed())
+                yield break;
+        }
+    }
+
+    static IEnumerator WaitForUnpausedFrame()
+    {
+        while (GamePauseController.IsPaused)
+            yield return null;
+    }
+
+    static bool WasEscapePressed()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+            return true;
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             return true;
 #endif
         return false;

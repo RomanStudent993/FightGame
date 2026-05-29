@@ -146,7 +146,7 @@ public class GamePauseController : MonoBehaviour
 
         Canvas pauseCanvas = _pauseRoot.AddComponent<Canvas>();
         pauseCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        pauseCanvas.sortingOrder = 500;
+        pauseCanvas.sortingOrder = 1700;
 
         CanvasScaler scaler = _pauseRoot.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;

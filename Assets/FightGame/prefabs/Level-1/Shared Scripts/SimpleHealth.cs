@@ -162,6 +162,20 @@ public class SimpleHealth : MonoBehaviour
         return true;
     }
 
+    /// <summary>Мгновенная смерть без проверки неуязвимости (читы / отладка).</summary>
+    public void ForceKill()
+    {
+        if (isDead)
+            return;
+
+        isDead = true;
+        PlayDeathSound();
+        if (animator != null)
+            TriggerDeath();
+        Died?.Invoke(gameObject);
+        EnterDeathStasis();
+    }
+
     void SpawnDamagePopup(int damage)
     {
         if (!showDamagePopup) return;

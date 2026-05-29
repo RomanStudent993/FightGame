@@ -15,11 +15,11 @@ using UnityEngine.InputSystem.UI;
 public class GameDeathController : MonoBehaviour
 {
     const string MenuBackgroundResourcePath = "Menu/main";
-    const string ReturnButtonResourcePath = "Menu/return";
+    const string ReturnButtonResourcePath = "Menu/return-menu";
     const string ExitButtonResourcePath = "Menu/button-exit";
 #if UNITY_EDITOR
     const string EditorMenuBackgroundPath = "Assets/FightGame/prefabs/Menu/main.png";
-    const string EditorReturnButtonPath = "Assets/FightGame/prefabs/Menu/return.png";
+    const string EditorReturnButtonPath = "Assets/FightGame/prefabs/Menu/return-menu.png";
     const string EditorExitButtonPath = "Assets/FightGame/prefabs/Menu/button-exit.png";
 #endif
 
@@ -34,8 +34,9 @@ public class GameDeathController : MonoBehaviour
     [SerializeField] Sprite exitButtonSprite;
     [SerializeField] float buttonWidth = 560f;
     [SerializeField] float buttonBottomMargin = 320f;
-    [SerializeField] float buttonSpacing = 12f;
+    [SerializeField] float buttonSpacing = 4f;
     [SerializeField] float blockInputAfterUiClickSeconds = 0.2f;
+    [SerializeField] Vector2 returnButtonHitboxPadding = new Vector2(56f, 32f);
 
     GameObject _deathRoot;
     Image _deathBackground;
@@ -68,7 +69,10 @@ public class GameDeathController : MonoBehaviour
         }
 
         if (_instance != null)
+        {
+            SceneFlashSuppressor.HideBlackout();
             _instance.HideDeathScreen();
+        }
         else
             EnsureInstanceForScene(scene);
     }
@@ -160,11 +164,35 @@ public class GameDeathController : MonoBehaviour
         if (GamePauseController.IsPaused)
             GamePauseController.ForceResume();
 
+        EnsureEventSystem();
+        EnsureDeathBackground();
+        SceneFlashSuppressor.HideGameplayStrip();
+
         _deathActive = true;
         _timeScaleBeforeDeath = Time.timeScale <= 0f ? 1f : Time.timeScale;
         Time.timeScale = 0f;
         AudioListener.pause = true;
         _deathRoot.SetActive(true);
+    }
+
+    void EnsureDeathBackground()
+    {
+        if (_deathBackground == null)
+            return;
+
+        if (_deathBackground.sprite != null)
+            return;
+
+        Sprite bg = ResolveMenuBackground();
+        if (bg == null)
+        {
+            Debug.LogWarning("GameDeathController: не найден main.png (Resources/Menu/main или prefabs/Menu/main.png).");
+            return;
+        }
+
+        _deathBackground.sprite = bg;
+        if (bg.texture != null)
+            bg.texture.filterMode = FilterMode.Point;
     }
 
     void HideDeathScreen()
@@ -174,6 +202,8 @@ public class GameDeathController : MonoBehaviour
 
         if (_deathRoot != null)
             _deathRoot.SetActive(false);
+
+        SceneFlashSuppressor.RestoreGameplayStrip();
 
         if (Time.timeScale <= 0f)
         {
@@ -207,7 +237,7 @@ public class GameDeathController : MonoBehaviour
         StretchFull(bgGo.GetComponent<RectTransform>());
 
         _deathBackground = bgGo.AddComponent<Image>();
-        _deathBackground.raycastTarget = true;
+        _deathBackground.raycastTarget = false;
         _deathBackground.type = Image.Type.Simple;
         _deathBackground.preserveAspect = false;
         _deathBackground.color = Color.white;
@@ -233,15 +263,18 @@ public class GameDeathController : MonoBehaviour
         Sprite returnSprite = ResolveReturnButton();
         Sprite exitSprite = ResolveExitButton();
         float bottom = buttonBottomMargin;
+        Vector2 buttonSize = exitSprite != null
+            ? new Vector2(buttonWidth, ButtonHeight(exitSprite))
+            : new Vector2(buttonWidth, 140f);
 
         if (exitSprite != null)
         {
-            AddSpriteButton(parent, "Exit", exitSprite, bottom, ExitToMainMenu);
-            bottom += ButtonHeight(exitSprite) + buttonSpacing;
+            AddSpriteButton(parent, "Exit", exitSprite, bottom, buttonSize, ExitToMainMenu);
+            bottom += buttonSize.y + buttonSpacing - returnButtonHitboxPadding.y;
         }
 
         if (returnSprite != null)
-            AddSpriteButton(parent, "Return", returnSprite, bottom, OnReturnClicked);
+            AddSpriteButtonWithHitbox(parent, "Return", returnSprite, bottom, buttonSize, returnButtonHitboxPadding, OnReturnClicked);
     }
 
     void OnReturnClicked()
@@ -260,6 +293,7 @@ public class GameDeathController : MonoBehaviour
         if (_deathRoot != null)
             _deathRoot.SetActive(false);
 
+        SceneFlashSuppressor.ShowBlackout();
         BattleIntroController.ResetForLevelRestart();
 
         Scene scene = SceneManager.GetActiveScene();
@@ -293,10 +327,15 @@ public class GameDeathController : MonoBehaviour
         _blockGameplayInputUntilUnscaled = Time.unscaledTime + duration;
     }
 
-    Button AddSpriteButton(Transform parent, string objectName, Sprite sprite, float bottomOffset, UnityEngine.Events.UnityAction onClick)
+    Button AddSpriteButton(
+        Transform parent,
+        string objectName,
+        Sprite sprite,
+        float bottomOffset,
+        Vector2 size,
+        UnityEngine.Events.UnityAction onClick,
+        bool preserveAspect = true)
     {
-        Vector2 size = new Vector2(buttonWidth, ButtonHeight(sprite));
-
         GameObject btnGo = new GameObject(objectName, typeof(RectTransform));
         btnGo.transform.SetParent(parent, false);
 
@@ -310,12 +349,66 @@ public class GameDeathController : MonoBehaviour
         Image img = btnGo.AddComponent<Image>();
         img.sprite = sprite;
         img.type = Image.Type.Simple;
-        img.preserveAspect = true;
+        img.preserveAspect = preserveAspect;
         if (sprite != null && sprite.texture != null)
             sprite.texture.filterMode = FilterMode.Point;
 
         Button btn = btnGo.AddComponent<Button>();
         btn.targetGraphic = img;
+        ColorBlock colors = btn.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(0.93f, 0.93f, 0.93f, 1f);
+        colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+        colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.7f);
+        btn.colors = colors;
+        btn.onClick.AddListener(onClick);
+        return btn;
+    }
+
+    Button AddSpriteButtonWithHitbox(
+        Transform parent,
+        string objectName,
+        Sprite sprite,
+        float bottomOffset,
+        Vector2 visualSize,
+        Vector2 hitboxPadding,
+        UnityEngine.Events.UnityAction onClick)
+    {
+        Vector2 hitSize = visualSize + hitboxPadding * 2f;
+
+        GameObject btnGo = new GameObject(objectName, typeof(RectTransform));
+        btnGo.transform.SetParent(parent, false);
+
+        RectTransform rt = btnGo.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0f);
+        rt.anchorMax = new Vector2(0.5f, 0f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.sizeDelta = hitSize;
+        rt.anchoredPosition = new Vector2(0f, bottomOffset);
+
+        Image hitImage = btnGo.AddComponent<Image>();
+        hitImage.color = new Color(1f, 1f, 1f, 0f);
+        hitImage.raycastTarget = true;
+
+        GameObject visualGo = new GameObject("Visual", typeof(RectTransform));
+        visualGo.transform.SetParent(btnGo.transform, false);
+        RectTransform visualRt = visualGo.GetComponent<RectTransform>();
+        visualRt.anchorMin = new Vector2(0.5f, 0.5f);
+        visualRt.anchorMax = new Vector2(0.5f, 0.5f);
+        visualRt.pivot = new Vector2(0.5f, 0.5f);
+        visualRt.sizeDelta = visualSize;
+        visualRt.anchoredPosition = Vector2.zero;
+
+        Image visualImage = visualGo.AddComponent<Image>();
+        visualImage.sprite = sprite;
+        visualImage.type = Image.Type.Simple;
+        visualImage.preserveAspect = true;
+        visualImage.raycastTarget = false;
+        if (sprite != null && sprite.texture != null)
+            sprite.texture.filterMode = FilterMode.Point;
+
+        Button btn = btnGo.AddComponent<Button>();
+        btn.targetGraphic = hitImage;
         ColorBlock colors = btn.colors;
         colors.normalColor = Color.white;
         colors.highlightedColor = new Color(0.93f, 0.93f, 0.93f, 1f);
@@ -344,7 +437,15 @@ public class GameDeathController : MonoBehaviour
 
         Sprite[] sprites = Resources.LoadAll<Sprite>(MenuBackgroundResourcePath);
         if (sprites != null && sprites.Length > 0)
+        {
+            for (int i = 0; i < sprites.Length; i++)
+            {
+                if (sprites[i] != null && (sprites[i].name == "main_0" || sprites[i].name == "main"))
+                    return menuBackgroundSprite = sprites[i];
+            }
+
             return menuBackgroundSprite = sprites[0];
+        }
 
 #if UNITY_EDITOR
         return menuBackgroundSprite = LoadSpriteFromAssetPath(EditorMenuBackgroundPath);
@@ -391,7 +492,15 @@ public class GameDeathController : MonoBehaviour
 
         Sprite[] sprites = Resources.LoadAll<Sprite>(resourcePath);
         if (sprites != null && sprites.Length > 0)
+        {
+            for (int i = 0; i < sprites.Length; i++)
+            {
+                if (sprites[i] != null && sprites[i].name.EndsWith("_0"))
+                    return sprites[i];
+            }
+
             return sprites[0];
+        }
 
 #if UNITY_EDITOR
         return LoadSpriteFromAssetPath(editorAssetPath);
@@ -419,15 +528,28 @@ public class GameDeathController : MonoBehaviour
 
     static void EnsureEventSystem()
     {
-        if (Object.FindAnyObjectByType<EventSystem>(FindObjectsInactive.Exclude) != null)
-            return;
+        EventSystem eventSystem = Object.FindAnyObjectByType<EventSystem>(FindObjectsInactive.Include);
+        if (eventSystem == null)
+        {
+            GameObject esGo = new GameObject("EventSystem");
+            DontDestroyOnLoad(esGo);
+            eventSystem = esGo.AddComponent<EventSystem>();
+        }
+        else
+        {
+            DontDestroyOnLoad(eventSystem.gameObject);
+        }
 
-        GameObject es = new GameObject("EventSystem");
-        es.AddComponent<EventSystem>();
 #if ENABLE_INPUT_SYSTEM
-        es.AddComponent<InputSystemUIInputModule>();
+        StandaloneInputModule legacyModule = eventSystem.GetComponent<StandaloneInputModule>();
+        if (legacyModule != null)
+            Object.Destroy(legacyModule);
+
+        if (eventSystem.GetComponent<InputSystemUIInputModule>() == null)
+            eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
 #else
-        es.AddComponent<StandaloneInputModule>();
+        if (eventSystem.GetComponent<StandaloneInputModule>() == null)
+            eventSystem.gameObject.AddComponent<StandaloneInputModule>();
 #endif
     }
 

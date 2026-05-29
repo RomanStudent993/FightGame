@@ -77,12 +77,22 @@ public class BattleIntroController : MonoBehaviour
     static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         if (IsFightIntroScene(scene))
+        {
             FightStarted = false;
+            SceneFlashSuppressor.HideGameplayStrip();
+        }
     }
 
     public static void ResetForLevelRestart()
     {
         FightStarted = false;
+    }
+
+    public static void ForceSkipIntroAndBeginFight()
+    {
+        BattleIntroController intro = Object.FindAnyObjectByType<BattleIntroController>(FindObjectsInactive.Include);
+        if (intro != null)
+            intro.ForceSkipIntroAndBeginFightInstance();
     }
 
     static void EnsureOnBattleScene(Scene scene)
@@ -103,6 +113,7 @@ public class BattleIntroController : MonoBehaviour
     {
         FightStarted = false;
         EarlyLockCombatInScene();
+        SceneFlashSuppressor.HideGameplayStrip();
     }
 
     void Start()
@@ -130,6 +141,8 @@ public class BattleIntroController : MonoBehaviour
     {
         _introRunning = false;
         RestoreCombatCollisions();
+        SceneFlashSuppressor.RestoreGameplayStrip();
+        SceneFlashSuppressor.HideBlackout();
     }
 
     static bool IsFightIntroScene()
@@ -153,10 +166,10 @@ public class BattleIntroController : MonoBehaviour
 
     void EarlyLockCombatInScene()
     {
-        foreach (HeroKnight hero in Object.FindObjectsByType<HeroKnight>(FindObjectsSortMode.None))
+        foreach (HeroKnight hero in Object.FindObjectsByType<HeroKnight>())
             hero.enabled = false;
 
-        foreach (EnemyAI ai in Object.FindObjectsByType<EnemyAI>(FindObjectsSortMode.None))
+        foreach (EnemyAI ai in Object.FindObjectsByType<EnemyAI>())
         {
             ai.enabled = false;
             EnemyContactDamage contact = ai.GetComponent<EnemyContactDamage>();
@@ -164,13 +177,13 @@ public class BattleIntroController : MonoBehaviour
                 contact.enabled = false;
         }
 
-        foreach (PlayerAttackDamage atk in Object.FindObjectsByType<PlayerAttackDamage>(FindObjectsSortMode.None))
+        foreach (PlayerAttackDamage atk in Object.FindObjectsByType<PlayerAttackDamage>())
             atk.enabled = false;
 
-        foreach (PlayerShieldDefense shield in Object.FindObjectsByType<PlayerShieldDefense>(FindObjectsSortMode.None))
+        foreach (PlayerShieldDefense shield in Object.FindObjectsByType<PlayerShieldDefense>())
             shield.enabled = false;
 
-        foreach (EvilWizardRangedCombat ranged in Object.FindObjectsByType<EvilWizardRangedCombat>(FindObjectsSortMode.None))
+        foreach (EvilWizardRangedCombat ranged in Object.FindObjectsByType<EvilWizardRangedCombat>())
             ranged.enabled = false;
     }
 
@@ -275,7 +288,7 @@ public class BattleIntroController : MonoBehaviour
         if (Camera.main != null)
             return Camera.main;
 
-        Camera[] cameras = Object.FindObjectsByType<Camera>(FindObjectsSortMode.None);
+        Camera[] cameras = Object.FindObjectsByType<Camera>();
         for (int i = 0; i < cameras.Length; i++)
         {
             if (cameras[i] != null && cameras[i].CompareTag("MainCamera"))
@@ -593,6 +606,8 @@ public class BattleIntroController : MonoBehaviour
 
         FightStarted = true;
         _introRunning = false;
+        SceneFlashSuppressor.RestoreGameplayStrip();
+        SceneFlashSuppressor.HideBlackout();
         UnlockCombat();
 
         if (_countdownCanvas != null)
@@ -603,5 +618,10 @@ public class BattleIntroController : MonoBehaviour
             StopCoroutine(_introRoutine);
             _introRoutine = null;
         }
+    }
+
+    void ForceSkipIntroAndBeginFightInstance()
+    {
+        BeginFight();
     }
 }

@@ -1,9 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
 /// <summary>Правый верхний угол: жёлтый подзаголовок и строка задачи. После смерти врага — смена текста задачи.</summary>
 public class MissionObjectiveHud : MonoBehaviour
@@ -67,6 +64,9 @@ public class MissionObjectiveHud : MonoBehaviour
     {
         if (who == null || enemyKilled) return;
         if (!who.transform.root.CompareTag("Enemy")) return;
+        if (!BattleIntroController.FightStarted)
+            return;
+
         enemyKilled = true;
         if (taskUi != null)
             taskUi.text = taskAfterKill;
@@ -77,28 +77,38 @@ public class MissionObjectiveHud : MonoBehaviour
     System.Collections.IEnumerator LoadNextLevelRoutine()
     {
         transitionStarted = true;
+        ContinuePrompt.SetLevelTransitionActive(true);
+
         Canvas canvas = BuildLoadingCanvas();
         if (canvas == null)
+        {
+            ContinuePrompt.SetLevelTransitionActive(false);
             yield break;
+        }
 
         Image black = canvas.transform.Find("Black")?.GetComponent<Image>();
         Image bg = canvas.transform.Find("LoadingImage")?.GetComponent<Image>();
         Text continueUi = canvas.transform.Find("ContinueLabel")?.GetComponent<Text>();
         if (black == null || bg == null || continueUi == null)
+        {
+            ContinuePrompt.SetLevelTransitionActive(false);
             yield break;
+        }
 
         canvas.gameObject.SetActive(true);
-        black.color = new Color(0f, 0f, 0f, 0f);
+        black.color = new Color(0f, 0f, 0f, 0.95f);
         bg.color = new Color(1f, 1f, 1f, 0f);
+        SceneFlashSuppressor.HideGameplayStrip();
 
-        float startDelay = Mathf.Max(0f, delayBeforeFade);
-        if (startDelay > 0.001f)
-            yield return new WaitForSecondsRealtime(startDelay);
+        yield return ContinuePrompt.WaitForSecondsRealtimePauseAware(Mathf.Max(0f, delayBeforeFade));
 
         float fadeT = Mathf.Max(0.05f, fadeDuration);
         float t = 0f;
         while (t < fadeT)
         {
+            while (GamePauseController.IsPaused)
+                yield return null;
+
             t += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(t / fadeT);
             black.color = new Color(0f, 0f, 0f, 0.95f * k);
@@ -106,11 +116,12 @@ public class MissionObjectiveHud : MonoBehaviour
             yield return null;
         }
 
-        yield return new WaitForSecondsRealtime(Mathf.Max(0.1f, loadingScreenDuration));
+        yield return ContinuePrompt.WaitForSecondsRealtimePauseAware(Mathf.Max(0.1f, loadingScreenDuration));
         continueUi.gameObject.SetActive(true);
 
-        while (!WasAnyContinuePressed())
-            yield return null;
+        yield return ContinuePrompt.WaitUntilContinuePressedPauseAware();
+
+        ContinuePrompt.SetLevelTransitionActive(false);
 
         if (!TryLoadNextScene())
             Debug.LogWarning($"MissionObjectiveHud: scenes '{nextSceneName}' and '{nextScenePath}' are unavailable.");
@@ -137,27 +148,6 @@ public class MissionObjectiveHud : MonoBehaviour
 
         canvas.gameObject.SetActive(false);
         return canvas;
-    }
-
-    static bool WasAnyContinuePressed()
-    {
-        if (Input.anyKeyDown) return true;
-        if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2))
-            return true;
-#if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) return true;
-        if (Mouse.current != null &&
-            (Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.rightButton.wasPressedThisFrame || Mouse.current.middleButton.wasPressedThisFrame))
-            return true;
-        if (Gamepad.current != null && (
-            Gamepad.current.buttonSouth.wasPressedThisFrame ||
-            Gamepad.current.buttonNorth.wasPressedThisFrame ||
-            Gamepad.current.buttonWest.wasPressedThisFrame ||
-            Gamepad.current.buttonEast.wasPressedThisFrame ||
-            Gamepad.current.startButton.wasPressedThisFrame))
-            return true;
-#endif
-        return false;
     }
 
     bool TryLoadNextScene()

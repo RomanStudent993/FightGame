@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.InputSystem;
 #endif
 
-/// <summary>Ctrl+Shift+Пробел: в бою — мгновенная смерть врагов; в обучении — сразу конец.</summary>
+/// <summary>Ctrl+Shift+Пробел: в бою — мгновенная смерть врагов; в обучении — сразу конец. Ctrl+Shift+G: смерть игрока (только после начала боя).</summary>
 [DefaultExecutionOrder(12000)]
 public class GameplayCheatInput : MonoBehaviour
 {
@@ -64,10 +64,19 @@ public class GameplayCheatInput : MonoBehaviour
 
     void Update()
     {
-        if (!GameplayCheatKeys.WasCtrlShiftSpacePressed())
+        if (GameFinaleController.IsPlaying || GameDeathController.IsShowing || GamePauseController.IsPaused)
             return;
 
-        if (GameFinaleController.IsPlaying)
+        if (GameplayCheatKeys.WasCtrlShiftGPressed())
+        {
+            if (!BattleIntroController.FightStarted)
+                return;
+
+            GameplayCheatKeys.KillPlayerInScene();
+            return;
+        }
+
+        if (!GameplayCheatKeys.WasCtrlShiftSpacePressed())
             return;
 
         Scene scene = SceneManager.GetActiveScene();
@@ -76,6 +85,13 @@ public class GameplayCheatInput : MonoBehaviour
             TutorialQuestController tutorial = FindAnyObjectByType<TutorialQuestController>();
             if (tutorial != null)
                 tutorial.ForceCompleteTutorial();
+            return;
+        }
+
+        if (!BattleIntroController.FightStarted)
+        {
+            BattleIntroController.ForceSkipIntroAndBeginFight();
+            GameplayCheatKeys.KillAllEnemiesInScene(force: true);
             return;
         }
 
@@ -104,7 +120,26 @@ public static class GameplayCheatKeys
         return false;
     }
 
-    public static void KillAllEnemiesInScene()
+    public static bool WasCtrlShiftGPressed()
+    {
+        bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+        bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        if (ctrl && shift && Input.GetKeyDown(KeyCode.G))
+            return true;
+
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null)
+        {
+            bool ctrlNew = Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed;
+            bool shiftNew = Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
+            if (ctrlNew && shiftNew && Keyboard.current.gKey.wasPressedThisFrame)
+                return true;
+        }
+#endif
+        return false;
+    }
+
+    public static void KillAllEnemiesInScene(bool force = false)
     {
         SimpleHealth[] all = Object.FindObjectsByType<SimpleHealth>();
         for (int i = 0; i < all.Length; i++)
@@ -113,8 +148,36 @@ public static class GameplayCheatKeys
             if (health == null || health.IsDead || !IsKillableEnemy(health.gameObject))
                 continue;
 
-            health.TakeDamage(int.MaxValue / 4);
+            if (force)
+                health.ForceKill();
+            else
+                health.TakeDamage(int.MaxValue / 4);
         }
+    }
+
+    public static void KillPlayerInScene()
+    {
+        SimpleHealth[] all = Object.FindObjectsByType<SimpleHealth>();
+        for (int i = 0; i < all.Length; i++)
+        {
+            SimpleHealth health = all[i];
+            if (health == null || health.IsDead || !IsPlayer(health.gameObject))
+                continue;
+
+            health.ForceKill();
+        }
+    }
+
+    static bool IsPlayer(GameObject who)
+    {
+        if (who == null)
+            return false;
+
+        Transform root = who.transform.root;
+        if (root.CompareTag("Player"))
+            return true;
+
+        return root.GetComponentInChildren<HeroKnight>(true) != null;
     }
 
     static bool IsKillableEnemy(GameObject who)

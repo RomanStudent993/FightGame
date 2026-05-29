@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// Пошаговое обучение в EducationDemo: ходьба → прыжки → блок → удары по чучелу.
+/// Пошаговое обучение в EducationDemo: ходьба → прыжки → блок → кувырок → удары по чучелу.
 /// HUD в правом верхнем углу, заголовок «Обучение», прогресс 0/3 … 3/3.
 /// </summary>
 public class TutorialQuestController : MonoBehaviour
@@ -16,6 +16,7 @@ public class TutorialQuestController : MonoBehaviour
         Walk,
         Jump,
         Block,
+        Roll,
         Attack,
         Done
     }
@@ -28,6 +29,7 @@ public class TutorialQuestController : MonoBehaviour
     [SerializeField] int taskFontSize = 18;
     [SerializeField] float walkSegmentDistance = 0.7f;
     [SerializeField] float blockInputCooldown = 0.25f;
+    [SerializeField] float rollInputCooldown = 0.35f;
     [Tooltip("Счётчик блока (0/3) виден только пока игрок в кадре Main Camera.")]
     [SerializeField] float cameraVisibilityPadding = 0.05f;
     [Header("Переход после обучения")]
@@ -47,6 +49,7 @@ public class TutorialQuestController : MonoBehaviour
     bool _grounded = true;
     bool _wasGrounded = true;
     float _lastBlockCountTime = -10f;
+    float _lastRollCountTime = -10f;
 
     Transform _player;
     Camera _mainCamera;
@@ -111,6 +114,9 @@ public class TutorialQuestController : MonoBehaviour
             case Step.Block:
                 TickBlock();
                 RefreshHudIfBlockCounterVisibilityChanged();
+                break;
+            case Step.Roll:
+                TickRoll();
                 break;
         }
     }
@@ -215,6 +221,29 @@ public class TutorialQuestController : MonoBehaviour
         RegisterProgress();
     }
 
+    void TickRoll()
+    {
+        if (!WasShiftPressedThisFrame()) return;
+        if (!_grounded) return;
+        if (Time.time - _lastRollCountTime < rollInputCooldown) return;
+
+        _lastRollCountTime = Time.time;
+        RegisterProgress();
+    }
+
+    static bool WasShiftPressedThisFrame()
+    {
+        if (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift))
+            return true;
+
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null
+            && (Keyboard.current.leftShiftKey.wasPressedThisFrame || Keyboard.current.rightShiftKey.wasPressedThisFrame))
+            return true;
+#endif
+        return false;
+    }
+
     void OnScarecrowHit(ScarecrowHitReaction scarecrow, int hitCount)
     {
         if (_step != Step.Attack) return;
@@ -255,8 +284,11 @@ public class TutorialQuestController : MonoBehaviour
                 _lastBlockCounterVisible = false;
                 break;
             case Step.Block:
-                _step = Step.Attack;
+                _step = Step.Roll;
                 _lastBlockCounterVisible = false;
+                break;
+            case Step.Roll:
+                _step = Step.Attack;
                 if (_scarecrow != null)
                 {
                     _scarecrow.ResetHits();
@@ -303,6 +335,7 @@ public class TutorialQuestController : MonoBehaviour
             case Step.Walk: return "Походите (WASD)";
             case Step.Jump: return "Прыгните (Пробел)";
             case Step.Block: return "Щит (ПКМ)";
+            case Step.Roll: return "Кувырок (Шифт)";
             case Step.Attack: return "Ударьте чучело (ЛКМ)";
             default: return "";
         }
@@ -327,23 +360,30 @@ public class TutorialQuestController : MonoBehaviour
 
     System.Collections.IEnumerator EndTransitionRoutine()
     {
+        ContinuePrompt.SetLevelTransitionActive(true);
+
         BuildTransitionOverlay();
         if (_transitionCanvas == null || _transitionBlack == null || _transitionLoadingImage == null)
+        {
+            ContinuePrompt.SetLevelTransitionActive(false);
             yield break;
+        }
 
         _transitionCanvas.gameObject.SetActive(true);
-        _transitionBlack.color = new Color(0f, 0f, 0f, 0f);
+        _transitionBlack.color = new Color(0f, 0f, 0f, 0.95f);
         _transitionLoadingImage.color = new Color(1f, 1f, 1f, 0f);
         _continueUi.gameObject.SetActive(false);
+        SceneFlashSuppressor.HideGameplayStrip();
 
-        float startDelay = Mathf.Max(0f, delayBeforeFade);
-        if (startDelay > 0.001f)
-            yield return new WaitForSecondsRealtime(startDelay);
+        yield return ContinuePrompt.WaitForSecondsRealtimePauseAware(Mathf.Max(0f, delayBeforeFade));
 
         float fadeT = Mathf.Max(0.05f, fadeDuration);
         float t = 0f;
         while (t < fadeT)
         {
+            while (GamePauseController.IsPaused)
+                yield return null;
+
             t += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(t / fadeT);
             _transitionBlack.color = new Color(0f, 0f, 0f, 0.95f * k);
@@ -353,8 +393,9 @@ public class TutorialQuestController : MonoBehaviour
 
         _continueUi.gameObject.SetActive(true);
 
-        while (!WasAnyContinuePressed())
-            yield return null;
+        yield return ContinuePrompt.WaitUntilContinuePressedPauseAware();
+
+        ContinuePrompt.SetLevelTransitionActive(false);
 
         if (!TryLoadNextScene())
             Debug.LogWarning($"TutorialQuestController: scenes '{nextSceneName}' and '{nextScenePath}' are unavailable.");
@@ -379,33 +420,6 @@ public class TutorialQuestController : MonoBehaviour
         _continueUi = ContinuePrompt.CreateLabel(_transitionCanvas.transform);
 
         _transitionCanvas.gameObject.SetActive(false);
-    }
-
-    static bool WasAnyContinuePressed()
-    {
-        if (Input.anyKeyDown || Input.anyKey) return true;
-        if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2))
-            return true;
-#if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null && (Keyboard.current.anyKey.wasPressedThisFrame || Keyboard.current.anyKey.isPressed)) return true;
-        if (Mouse.current != null &&
-            (Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.rightButton.wasPressedThisFrame || Mouse.current.middleButton.wasPressedThisFrame
-             || Mouse.current.leftButton.isPressed || Mouse.current.rightButton.isPressed || Mouse.current.middleButton.isPressed))
-            return true;
-        if (Gamepad.current != null && (
-            Gamepad.current.buttonSouth.wasPressedThisFrame ||
-            Gamepad.current.buttonNorth.wasPressedThisFrame ||
-            Gamepad.current.buttonWest.wasPressedThisFrame ||
-            Gamepad.current.buttonEast.wasPressedThisFrame ||
-            Gamepad.current.startButton.wasPressedThisFrame ||
-            Gamepad.current.buttonSouth.isPressed ||
-            Gamepad.current.buttonNorth.isPressed ||
-            Gamepad.current.buttonWest.isPressed ||
-            Gamepad.current.buttonEast.isPressed ||
-            Gamepad.current.startButton.isPressed))
-            return true;
-#endif
-        return false;
     }
 
     bool TryLoadNextScene()
@@ -447,7 +461,7 @@ public class TutorialQuestController : MonoBehaviour
 
     void BuildHud()
     {
-        string glyphSample = "Обучение Походите WASD Прыгните Пробел Заблокируйте щитом ПКМ Зелье регенерации Q Ударьте чучело ЛКМ 0/3 пройдено!";
+        string glyphSample = "Обучение Походите WASD Прыгните Пробел Заблокируйте щитом ПКМ Кувырок Шифт Ударьте чучело ЛКМ 0/3 пройдено!";
         GameObject canvasGo = new GameObject("TutorialQuest_HUD", typeof(RectTransform));
         Canvas canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -489,7 +503,7 @@ public class TutorialQuestController : MonoBehaviour
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f),
             new Vector2(-8f, taskTop), new Vector2(-16f, taskBlockH));
         _taskUi = taskRt.gameObject.AddComponent<Text>();
-        _taskUi.font = font;
+        _taskUi.font = GameFont.ResolveForText(glyphSample, taskFontSize);
         _taskUi.fontSize = taskFontSize;
         _taskUi.fontStyle = FontStyle.Normal;
         _taskUi.color = YellowTask;
