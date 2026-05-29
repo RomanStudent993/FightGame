@@ -77,10 +77,7 @@ public class BattleIntroController : MonoBehaviour
     static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         if (IsFightIntroScene(scene))
-        {
             FightStarted = false;
-            SceneFlashSuppressor.HideGameplayStrip();
-        }
     }
 
     public static void ResetForLevelRestart()
@@ -113,7 +110,6 @@ public class BattleIntroController : MonoBehaviour
     {
         FightStarted = false;
         EarlyLockCombatInScene();
-        SceneFlashSuppressor.HideGameplayStrip();
     }
 
     void Start()
@@ -141,8 +137,6 @@ public class BattleIntroController : MonoBehaviour
     {
         _introRunning = false;
         RestoreCombatCollisions();
-        SceneFlashSuppressor.RestoreGameplayStrip();
-        SceneFlashSuppressor.HideBlackout();
     }
 
     static bool IsFightIntroScene()
@@ -606,8 +600,6 @@ public class BattleIntroController : MonoBehaviour
 
         FightStarted = true;
         _introRunning = false;
-        SceneFlashSuppressor.RestoreGameplayStrip();
-        SceneFlashSuppressor.HideBlackout();
         UnlockCombat();
 
         if (_countdownCanvas != null)

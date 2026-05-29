@@ -69,10 +69,7 @@ public class GameDeathController : MonoBehaviour
         }
 
         if (_instance != null)
-        {
-            SceneFlashSuppressor.HideBlackout();
             _instance.HideDeathScreen();
-        }
         else
             EnsureInstanceForScene(scene);
     }
@@ -166,7 +163,6 @@ public class GameDeathController : MonoBehaviour
 
         EnsureEventSystem();
         EnsureDeathBackground();
-        SceneFlashSuppressor.HideGameplayStrip();
 
         _deathActive = true;
         _timeScaleBeforeDeath = Time.timeScale <= 0f ? 1f : Time.timeScale;
@@ -202,8 +198,6 @@ public class GameDeathController : MonoBehaviour
 
         if (_deathRoot != null)
             _deathRoot.SetActive(false);
-
-        SceneFlashSuppressor.RestoreGameplayStrip();
 
         if (Time.timeScale <= 0f)
         {
@@ -293,7 +287,6 @@ public class GameDeathController : MonoBehaviour
         if (_deathRoot != null)
             _deathRoot.SetActive(false);
 
-        SceneFlashSuppressor.ShowBlackout();
         BattleIntroController.ResetForLevelRestart();
 
         Scene scene = SceneManager.GetActiveScene();

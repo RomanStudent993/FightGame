@@ -57,7 +57,6 @@ public class TutorialQuestController : MonoBehaviour
     Text _subtitleUi;
     Text _taskUi;
     Canvas _transitionCanvas;
-    Image _transitionBlack;
     Image _transitionLoadingImage;
     Text _continueUi;
     ScarecrowHitReaction _scarecrow;
@@ -363,17 +362,15 @@ public class TutorialQuestController : MonoBehaviour
         ContinuePrompt.SetLevelTransitionActive(true);
 
         BuildTransitionOverlay();
-        if (_transitionCanvas == null || _transitionBlack == null || _transitionLoadingImage == null)
+        if (_transitionCanvas == null || _transitionLoadingImage == null)
         {
             ContinuePrompt.SetLevelTransitionActive(false);
             yield break;
         }
 
         _transitionCanvas.gameObject.SetActive(true);
-        _transitionBlack.color = new Color(0f, 0f, 0f, 0.95f);
         _transitionLoadingImage.color = new Color(1f, 1f, 1f, 0f);
         _continueUi.gameObject.SetActive(false);
-        SceneFlashSuppressor.HideGameplayStrip();
 
         yield return ContinuePrompt.WaitForSecondsRealtimePauseAware(Mathf.Max(0f, delayBeforeFade));
 
@@ -386,7 +383,6 @@ public class TutorialQuestController : MonoBehaviour
 
             t += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(t / fadeT);
-            _transitionBlack.color = new Color(0f, 0f, 0f, 0.95f * k);
             _transitionLoadingImage.color = new Color(1f, 1f, 1f, k);
             yield return null;
         }
@@ -406,10 +402,6 @@ public class TutorialQuestController : MonoBehaviour
         if (_transitionCanvas != null) return;
 
         _transitionCanvas = ContinuePrompt.CreateTransitionCanvas("TutorialEndTransition", 1200);
-
-        RectTransform blackRt = CreateRect(_transitionCanvas.transform, "Black", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        _transitionBlack = blackRt.gameObject.AddComponent<Image>();
-        _transitionBlack.color = new Color(0f, 0f, 0f, 0f);
 
         RectTransform imageRt = CreateRect(_transitionCanvas.transform, "LoadingImage", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         _transitionLoadingImage = imageRt.gameObject.AddComponent<Image>();

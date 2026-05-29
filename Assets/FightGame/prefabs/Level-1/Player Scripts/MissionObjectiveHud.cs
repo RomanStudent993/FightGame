@@ -86,19 +86,16 @@ public class MissionObjectiveHud : MonoBehaviour
             yield break;
         }
 
-        Image black = canvas.transform.Find("Black")?.GetComponent<Image>();
         Image bg = canvas.transform.Find("LoadingImage")?.GetComponent<Image>();
         Text continueUi = canvas.transform.Find("ContinueLabel")?.GetComponent<Text>();
-        if (black == null || bg == null || continueUi == null)
+        if (bg == null || continueUi == null)
         {
             ContinuePrompt.SetLevelTransitionActive(false);
             yield break;
         }
 
         canvas.gameObject.SetActive(true);
-        black.color = new Color(0f, 0f, 0f, 0.95f);
         bg.color = new Color(1f, 1f, 1f, 0f);
-        SceneFlashSuppressor.HideGameplayStrip();
 
         yield return ContinuePrompt.WaitForSecondsRealtimePauseAware(Mathf.Max(0f, delayBeforeFade));
 
@@ -111,7 +108,6 @@ public class MissionObjectiveHud : MonoBehaviour
 
             t += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(t / fadeT);
-            black.color = new Color(0f, 0f, 0f, 0.95f * k);
             bg.color = new Color(1f, 1f, 1f, k);
             yield return null;
         }
@@ -131,11 +127,6 @@ public class MissionObjectiveHud : MonoBehaviour
     {
         Canvas canvas = ContinuePrompt.CreateTransitionCanvas("LevelTransition_Loading", 1300);
         Transform root = canvas.transform;
-
-        RectTransform blackRt = CreateRect(root, "Black",
-            Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        Image black = blackRt.gameObject.AddComponent<Image>();
-        black.color = new Color(0f, 0f, 0f, 0f);
 
         RectTransform imgRt = CreateRect(root, "LoadingImage",
             Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
