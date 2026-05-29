@@ -149,6 +149,9 @@ public class MissionObjectiveHud : MonoBehaviour
 
         // Для перехода из Level-1 в Level-2 грузим целевую сцену напрямую по пути из Build Settings.
         // Это исключает попадание в другой scene entry с таким же именем.
+        ContinuePrompt.EnsureSceneLoadedHook();
+        ContinuePrompt.ShowBlockingOverlay(loadingBackground);
+
         if (!string.IsNullOrEmpty(nextScenePath) && Application.CanStreamedLevelBeLoaded(nextScenePath))
         {
             SceneManager.LoadScene(nextScenePath, LoadSceneMode.Single);
@@ -160,6 +163,8 @@ public class MissionObjectiveHud : MonoBehaviour
             SceneManager.LoadScene(nextSceneName, LoadSceneMode.Single);
             return true;
         }
+
+        ContinuePrompt.HideBlockingOverlay();
 
         return false;
     }

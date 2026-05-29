@@ -292,6 +292,8 @@ public class MenuStoryIntro : MonoBehaviour
             return;
 
         _isPlaying = false;
+        ContinuePrompt.EnsureSceneLoadedHook();
+        ContinuePrompt.ShowBlockingOverlay(loadingBackground);
 
         if (_sceneLoad != null && _sceneLoad.progress >= 0.9f)
         {

@@ -77,23 +77,27 @@ public class StartMenuBootstrap : MonoBehaviour
         GameFont.Reload();
         GameSaveService.RestoreActiveSlotFromPrefs();
         titleFont = ResolveTitleFont();
+        ContinuePrompt.EnsureSceneLoadedHook();
 
+        RemoveMenuWorldGeometry();
         EnsureEventSystem();
         BuildUi();
         RefreshSaveDependentButtons();
-        DisableMenuHeroCombat();
     }
 
-    void DisableMenuHeroCombat()
+    /// <summary>Убирает тестовую «сцену» (Square + HeroKnight) из StartMenu — она мигала при загрузке.</summary>
+    static void RemoveMenuWorldGeometry()
     {
-        foreach (HeroKnight hero in FindObjectsByType<HeroKnight>())
-            hero.enabled = false;
+        GameObject square = GameObject.Find("Square");
+        if (square != null)
+            Object.Destroy(square);
 
-        foreach (PlayerAttackDamage attack in FindObjectsByType<PlayerAttackDamage>())
-            attack.enabled = false;
+        foreach (HeroKnight hero in Object.FindObjectsByType<HeroKnight>())
+            Object.Destroy(hero.gameObject);
 
-        foreach (PlayerShieldDefense shield in FindObjectsByType<PlayerShieldDefense>())
-            shield.enabled = false;
+        Camera camera = Camera.main;
+        if (camera != null)
+            camera.cullingMask = 0;
     }
 
     Font ResolveTitleFont()
@@ -475,10 +479,12 @@ public class StartMenuBootstrap : MonoBehaviour
 
         GameSaveService.CreateNewGame(slotIndex);
         _saveSlotsVisible = false;
-        HideMenuChrome();
 
         if (_storyIntro != null)
+        {
+            HideMenuChrome();
             _storyIntro.Play(newGameSceneName);
+        }
         else
             LoadScene(newGameSceneName);
     }
@@ -495,7 +501,6 @@ public class StartMenuBootstrap : MonoBehaviour
             return;
 
         _saveSlotsVisible = false;
-        HideMenuChrome();
         StartCoroutine(LoadSaveRoutine(sceneName, stage));
     }
 
@@ -539,6 +544,8 @@ public class StartMenuBootstrap : MonoBehaviour
         Text label = ContinuePrompt.CreateLabel(root);
         label.gameObject.SetActive(true);
 
+        HideMenuChrome();
+
         yield return null;
 
         while (!ContinuePrompt.WasAnyKeyPressed())
@@ -581,7 +588,7 @@ public class StartMenuBootstrap : MonoBehaviour
 
     static bool WasDeleteAllSavesPressed() => GameplayCheatKeys.WasCtrlShiftSpacePressed();
 
-    static void LoadScene(string sceneName)
+    void LoadScene(string sceneName)
     {
         if (string.IsNullOrEmpty(sceneName))
         {
@@ -595,6 +602,7 @@ public class StartMenuBootstrap : MonoBehaviour
             return;
         }
 
+        ContinuePrompt.ShowBlockingOverlay(ResolveLoadingBackground());
         SceneManager.LoadScene(sceneName);
     }
 

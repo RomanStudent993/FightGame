@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -17,9 +18,79 @@ public static class ContinuePrompt
 
     public static bool IsLevelTransitionActive { get; private set; }
 
+    static GameObject _blockingOverlayRoot;
+    static bool _sceneLoadedHookRegistered;
+
     public static void SetLevelTransitionActive(bool active)
     {
         IsLevelTransitionActive = active;
+    }
+
+    public static void EnsureSceneLoadedHook()
+    {
+        if (_sceneLoadedHookRegistered)
+            return;
+
+        _sceneLoadedHookRegistered = true;
+        SceneManager.sceneLoaded += OnSceneLoadedHideBlockingOverlay;
+    }
+
+    static void OnSceneLoadedHideBlockingOverlay(Scene scene, LoadSceneMode mode)
+    {
+        HideBlockingOverlay();
+    }
+
+    /// <summary>Полноэкранная заглушка на время LoadScene (не чёрный кадр Unity).</summary>
+    public static void ShowBlockingOverlay(Sprite background)
+    {
+        EnsureSceneLoadedHook();
+        HideBlockingOverlay();
+
+        _blockingOverlayRoot = new GameObject("SceneBlockingOverlay", typeof(RectTransform));
+        Object.DontDestroyOnLoad(_blockingOverlayRoot);
+
+        Canvas canvas = _blockingOverlayRoot.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 4000;
+
+        CanvasScaler scaler = _blockingOverlayRoot.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        GameObject imageGo = new GameObject("Background", typeof(RectTransform));
+        imageGo.transform.SetParent(_blockingOverlayRoot.transform, false);
+        RectTransform rt = imageGo.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+
+        Image image = imageGo.AddComponent<Image>();
+        image.raycastTarget = false;
+        image.type = Image.Type.Simple;
+        image.preserveAspect = false;
+
+        if (background != null)
+        {
+            image.sprite = background;
+            image.color = Color.white;
+            if (background.texture != null)
+                background.texture.filterMode = FilterMode.Point;
+        }
+        else
+        {
+            image.color = new Color(0.05f, 0.05f, 0.06f, 1f);
+        }
+    }
+
+    public static void HideBlockingOverlay()
+    {
+        if (_blockingOverlayRoot == null)
+            return;
+
+        Object.Destroy(_blockingOverlayRoot);
+        _blockingOverlayRoot = null;
     }
 
     public static Canvas CreateTransitionCanvas(string name, int sortingOrder)

@@ -289,6 +289,9 @@ public class GameDeathController : MonoBehaviour
 
         BattleIntroController.ResetForLevelRestart();
 
+        ContinuePrompt.EnsureSceneLoadedHook();
+        ContinuePrompt.ShowBlockingOverlay(ResolveMenuBackground());
+
         Scene scene = SceneManager.GetActiveScene();
         if (!string.IsNullOrEmpty(scene.path))
             SceneManager.LoadScene(scene.path, LoadSceneMode.Single);
@@ -307,6 +310,9 @@ public class GameDeathController : MonoBehaviour
 
         if (_deathRoot != null)
             _deathRoot.SetActive(false);
+
+        ContinuePrompt.EnsureSceneLoadedHook();
+        ContinuePrompt.ShowBlockingOverlay(ResolveMenuBackground());
 
         if (Application.CanStreamedLevelBeLoaded(MainMenuSceneName))
             SceneManager.LoadScene(MainMenuSceneName);

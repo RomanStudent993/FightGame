@@ -420,6 +420,9 @@ public class TutorialQuestController : MonoBehaviour
         if (nextStage != SaveProgressStage.None)
             GameSaveService.AdvanceStage(nextStage);
 
+        ContinuePrompt.EnsureSceneLoadedHook();
+        ContinuePrompt.ShowBlockingOverlay(loadingBackground);
+
         if (!string.IsNullOrEmpty(nextSceneName))
         {
             if (Application.CanStreamedLevelBeLoaded(nextSceneName))
