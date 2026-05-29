@@ -54,6 +54,9 @@ public class GameFinaleController : MonoBehaviour
     [SerializeField] Vector3 flashbackCameraPosition = new Vector3(0f, 4.07f, -10f);
     [SerializeField] float flashbackOrthoSize = 5f;
     [SerializeField] float flashbackCameraMoveDuration = 0.9f;
+    [Tooltip("Доп. сдвиг мага по Y на кадре «Воины все были убиты» (если спрайт чуть утоплен).")]
+    [SerializeField] float flashbackWizardFeetRaise = 0f;
+    [SerializeField] float flashbackFloorContactY = -0.57f;
 
     [Header("Префабы (опционально)")]
     [SerializeField] GameObject heavyBanditPrefab;
@@ -515,67 +518,92 @@ public class GameFinaleController : MonoBehaviour
 
         if (banditPrefab != null)
         {
-            GameObject bandit = Instantiate(banditPrefab, new Vector3(2.8f, -0.57f, 0f), Quaternion.identity, _flashbackStage.transform);
-            bandit.name = "FinaleDeadBandit";
-            bandit.transform.localScale = Vector3.one * 1.25f;
-            ForceDeathPose(bandit);
-            AlignSpriteFeetToY(bandit, -0.57f);
+            GameObject bandit = SpawnFlashbackCorpse(banditPrefab, new Vector3(2.8f, 0f, 0f), 1.25f, "FinaleDeadBandit");
+            AlignCharacterToFloor(bandit, flashbackFloorContactY);
 
             if (wizardPrefab != null)
-            {
-                GameObject wizard = Instantiate(wizardPrefab, new Vector3(-2.4f, -0.57f, 0f), Quaternion.identity, _flashbackStage.transform);
-                wizard.name = "FinaleDeadWizard";
-                wizard.transform.localScale = Vector3.one * 2.8f;
-                ForceDeathPose(wizard);
-                wizard.transform.position = new Vector3(wizard.transform.position.x, bandit.transform.position.y, 0f);
-                AlignSpriteFeetToY(wizard, GetSpriteFeetY(bandit));
-                LowerWizardForFlashback(wizard);
-            }
+                SpawnFlashbackWizard(wizardPrefab, bandit);
         }
         else if (wizardPrefab != null)
         {
             Debug.LogWarning("GameFinaleController: не найден префаб HeavyBandit.");
-            GameObject wizard = Instantiate(wizardPrefab, new Vector3(-2.4f, -0.57f, 0f), Quaternion.identity, _flashbackStage.transform);
-            wizard.name = "FinaleDeadWizard";
-            wizard.transform.localScale = Vector3.one * 2.8f;
-            ForceDeathPose(wizard);
-            AlignSpriteFeetToY(wizard, -0.57f);
-            LowerWizardForFlashback(wizard);
+            SpawnFlashbackWizard(wizardPrefab, null);
         }
     }
 
-    static void LowerWizardForFlashback(GameObject wizard)
+    GameObject SpawnFlashbackCorpse(GameObject prefab, Vector3 position, float uniformScale, string objectName)
     {
-        if (wizard == null)
+        GameObject corpse = Instantiate(prefab, position, Quaternion.identity, _flashbackStage.transform);
+        corpse.name = objectName;
+        corpse.transform.localScale = Vector3.one * uniformScale;
+        ForceDeathPose(corpse);
+        SettleDeathAnimation(corpse);
+        return corpse;
+    }
+
+    void SpawnFlashbackWizard(GameObject wizardPrefab, GameObject referenceBandit)
+    {
+        GameObject wizard = SpawnFlashbackCorpse(wizardPrefab, new Vector3(-2.4f, 0f, 0f), 2.8f, "FinaleDeadWizard");
+        float floorY = flashbackFloorContactY + flashbackWizardFeetRaise;
+        if (referenceBandit != null)
+        {
+            Transform banditSensor = FindGroundSensor(referenceBandit);
+            if (banditSensor != null)
+                floorY = banditSensor.position.y + flashbackWizardFeetRaise;
+        }
+
+        AlignCharacterToFloor(wizard, floorY);
+        SettleDeathAnimation(wizard);
+        AlignCharacterToFloor(wizard, floorY);
+    }
+
+    static void SettleDeathAnimation(GameObject go)
+    {
+        Animator anim = go != null ? go.GetComponentInChildren<Animator>(true) : null;
+        if (anim == null)
             return;
 
-        float height = GetSpriteHeight(wizard);
-        if (height > 0.01f)
-            wizard.transform.position -= new Vector3(0f, height, 0f);
+        float previousSpeed = anim.speed;
+        anim.speed = 1f;
+        for (int i = 0; i < 10; i++)
+            anim.Update(0.025f);
+        anim.speed = previousSpeed;
     }
 
-    static float GetSpriteHeight(GameObject go)
+    static Transform FindGroundSensor(GameObject go)
     {
         if (go == null)
-            return 0f;
+            return null;
 
-        float minY = float.PositiveInfinity;
-        float maxY = float.NegativeInfinity;
-        SpriteRenderer[] sprites = go.GetComponentsInChildren<SpriteRenderer>(true);
-        for (int i = 0; i < sprites.Length; i++)
+        Transform direct = go.transform.Find("GroundSensor");
+        if (direct != null)
+            return direct;
+
+        Transform[] children = go.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < children.Length; i++)
         {
-            SpriteRenderer sr = sprites[i];
-            if (sr == null || !sr.enabled || sr.sprite == null)
-                continue;
-
-            minY = Mathf.Min(minY, sr.bounds.min.y);
-            maxY = Mathf.Max(maxY, sr.bounds.max.y);
+            if (children[i] != null && children[i].name == "GroundSensor")
+                return children[i];
         }
 
-        if (float.IsPositiveInfinity(minY) || float.IsNegativeInfinity(maxY))
-            return 1f;
+        return null;
+    }
 
-        return Mathf.Max(0.1f, maxY - minY);
+    static void AlignCharacterToFloor(GameObject go, float targetContactY)
+    {
+        if (go == null)
+            return;
+
+        Transform groundSensor = FindGroundSensor(go);
+        if (groundSensor != null)
+        {
+            float delta = targetContactY - groundSensor.position.y;
+            if (Mathf.Abs(delta) > 0.0001f)
+                go.transform.position += new Vector3(0f, delta, 0f);
+            return;
+        }
+
+        AlignSpriteFeetToY(go, targetContactY);
     }
 
     static void ForceDeathPose(GameObject enemy)
@@ -605,16 +633,42 @@ public class GameFinaleController : MonoBehaviour
 
         anim.enabled = true;
         anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        anim.applyRootMotion = false;
         anim.Rebind();
         anim.Update(0f);
 
-        if (HasAnimatorState(anim, "Death"))
-            anim.Play("Death", 0, 0.98f);
-        else if (HasAnimatorState(anim, "HeavyBandit_Death"))
-            anim.Play("HeavyBandit_Death", 0, 0.98f);
+        if (HasAnimatorTrigger(anim, "Death"))
+        {
+            anim.ResetTrigger("Death");
+            anim.SetTrigger("Death");
+            anim.Update(0.05f);
+        }
 
-        anim.Update(0f);
+        if (HasAnimatorState(anim, "Death"))
+            anim.Play("Death", 0, 0.99f);
+        else if (HasAnimatorState(anim, "Wizard_Death"))
+            anim.Play("Wizard_Death", 0, 0.99f);
+        else if (HasAnimatorState(anim, "HeavyBandit_Death"))
+            anim.Play("HeavyBandit_Death", 0, 0.99f);
+
+        anim.speed = 1f;
+        SettleDeathAnimation(enemy);
         anim.speed = 0f;
+    }
+
+    static bool HasAnimatorTrigger(Animator anim, string triggerName)
+    {
+        if (anim == null || anim.runtimeAnimatorController == null)
+            return false;
+
+        for (int i = 0; i < anim.parameterCount; i++)
+        {
+            AnimatorControllerParameter parameter = anim.GetParameter(i);
+            if (parameter.type == AnimatorControllerParameterType.Trigger && parameter.name == triggerName)
+                return true;
+        }
+
+        return false;
     }
 
     static float GetSpriteFeetY(GameObject go)
