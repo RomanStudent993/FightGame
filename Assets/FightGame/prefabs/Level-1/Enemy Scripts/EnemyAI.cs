@@ -161,6 +161,9 @@ public class EnemyAI : MonoBehaviour
     private Rigidbody2D rb;
     private Transform target;
     private Animator animator;
+    private bool _hasAnimStateParam;
+    private bool _hasGroundedParam;
+    private bool _hasJumpParam;
     private Sensor_Bandit groundSensor;
     private float dodgeLockUntil;
     private float hitImpactSlowUntil;
@@ -187,6 +190,7 @@ public class EnemyAI : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         bodyCollider = GetComponent<Collider2D>();
         animator = GetComponent<Animator>();
+        CacheAnimatorParams();
         Transform gs = transform.Find("GroundSensor");
         if (gs != null)
             groundSensor = gs.GetComponent<Sensor_Bandit>();
@@ -202,6 +206,43 @@ public class EnemyAI : MonoBehaviour
             SimpleHealth health = gameObject.AddComponent<SimpleHealth>();
             health.maxHp = maxHp;
         }
+    }
+
+    void CacheAnimatorParams()
+    {
+        _hasAnimStateParam = false;
+        _hasGroundedParam = false;
+        _hasJumpParam = false;
+        if (animator == null || animator.runtimeAnimatorController == null)
+            return;
+
+        foreach (AnimatorControllerParameter p in animator.parameters)
+        {
+            if (p.type == AnimatorControllerParameterType.Int && p.name == "AnimState")
+                _hasAnimStateParam = true;
+            else if (p.type == AnimatorControllerParameterType.Bool && p.name == "Grounded")
+                _hasGroundedParam = true;
+            else if (p.type == AnimatorControllerParameterType.Trigger && p.name == "Jump")
+                _hasJumpParam = true;
+        }
+    }
+
+    void SetAnimState(int value)
+    {
+        if (_hasAnimStateParam && animator != null)
+            animator.SetInteger("AnimState", value);
+    }
+
+    void SetGrounded(bool grounded)
+    {
+        if (_hasGroundedParam && animator != null)
+            animator.SetBool("Grounded", grounded);
+    }
+
+    void TriggerJump()
+    {
+        if (_hasJumpParam && animator != null)
+            animator.SetTrigger("Jump");
     }
 
     void Start()
@@ -227,7 +268,7 @@ public class EnemyAI : MonoBehaviour
         if (target == null)
         {
             rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
-            if (animator != null) animator.SetInteger("AnimState", 0);
+            SetAnimState(0);
             return;
         }
 
@@ -488,9 +529,9 @@ public class EnemyAI : MonoBehaviour
         if (animator != null)
         {
             if (moveDist > activeStopDistance)
-                animator.SetInteger("AnimState", 2);
+                SetAnimState(2);
             else
-                animator.SetInteger("AnimState", meleeLocked ? 0 : 1);
+                SetAnimState(meleeLocked ? 0 : 1);
         }
 
         if (flipByScale && (moveDist > 0.01f || distanceX > 0.01f))
@@ -505,8 +546,8 @@ public class EnemyAI : MonoBehaviour
             );
         }
 
-        if (animator != null && groundSensor != null)
-            animator.SetBool("Grounded", groundSensor.State());
+        if (groundSensor != null)
+            SetGrounded(groundSensor.State());
     }
 
     static bool IsAliveCombatTarget(Transform root)
@@ -941,7 +982,7 @@ public class EnemyAI : MonoBehaviour
             if (groundSensor != null)
                 groundSensor.Disable(groundSensorJumpDisable);
             if (animator != null)
-                animator.SetTrigger("Jump");
+                TriggerJump();
             return true;
         }
 
@@ -982,7 +1023,7 @@ public class EnemyAI : MonoBehaviour
         if (groundSensor != null)
             groundSensor.Disable(groundSensorJumpDisable);
         if (animator != null)
-            animator.SetTrigger("Jump");
+            TriggerJump();
         return true;
     }
 

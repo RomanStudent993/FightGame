@@ -81,6 +81,19 @@ public class StartMenuBootstrap : MonoBehaviour
         EnsureEventSystem();
         BuildUi();
         RefreshSaveDependentButtons();
+        DisableMenuHeroCombat();
+    }
+
+    void DisableMenuHeroCombat()
+    {
+        foreach (HeroKnight hero in FindObjectsByType<HeroKnight>())
+            hero.enabled = false;
+
+        foreach (PlayerAttackDamage attack in FindObjectsByType<PlayerAttackDamage>())
+            attack.enabled = false;
+
+        foreach (PlayerShieldDefense shield in FindObjectsByType<PlayerShieldDefense>())
+            shield.enabled = false;
     }
 
     Font ResolveTitleFont()
@@ -566,24 +579,7 @@ public class StartMenuBootstrap : MonoBehaviour
         ShowSaveSlots(SaveSlotPanelMode.Load);
     }
 
-    static bool WasDeleteAllSavesPressed()
-    {
-        bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-        bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-        if (ctrl && shift && Input.GetKeyDown(KeyCode.Space))
-            return true;
-
-#if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null)
-        {
-            bool ctrlNew = Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed;
-            bool shiftNew = Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
-            if (ctrlNew && shiftNew && Keyboard.current.spaceKey.wasPressedThisFrame)
-                return true;
-        }
-#endif
-        return false;
-    }
+    static bool WasDeleteAllSavesPressed() => GameplayCheatKeys.WasCtrlShiftSpacePressed();
 
     static void LoadScene(string sceneName)
     {

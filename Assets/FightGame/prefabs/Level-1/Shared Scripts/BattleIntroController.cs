@@ -68,9 +68,25 @@ public class BattleIntroController : MonoBehaviour
     static void ResetStaticState() => FightStarted = true;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void EnsureOnBattleScene()
+    static void RegisterSceneHooks()
     {
-        Scene scene = SceneManager.GetActiveScene();
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        EnsureOnBattleScene(SceneManager.GetActiveScene());
+    }
+
+    static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (IsFightIntroScene(scene))
+            FightStarted = false;
+    }
+
+    public static void ResetForLevelRestart()
+    {
+        FightStarted = false;
+    }
+
+    static void EnsureOnBattleScene(Scene scene)
+    {
         if (!scene.IsValid())
             return;
 
@@ -114,8 +130,6 @@ public class BattleIntroController : MonoBehaviour
     {
         _introRunning = false;
         RestoreCombatCollisions();
-        if (!FightStarted)
-            BeginFight();
     }
 
     static bool IsFightIntroScene()

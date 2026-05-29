@@ -308,6 +308,16 @@ public class TutorialQuestController : MonoBehaviour
         }
     }
 
+    public void ForceCompleteTutorial()
+    {
+        if (_endingStarted || _step == Step.Done)
+            return;
+
+        _step = Step.Done;
+        RefreshHud();
+        StartEndTransition();
+    }
+
     void StartEndTransition()
     {
         if (_endingStarted) return;

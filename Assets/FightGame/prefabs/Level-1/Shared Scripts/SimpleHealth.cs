@@ -15,6 +15,9 @@ public class SimpleHealth : MonoBehaviour
     private bool isDead;
     private Animator animator;
     private float invulnerableUntil;
+    private bool _hasHurtTrigger;
+    private bool _hasDeathTrigger;
+    private bool _hasNoBloodBool;
 
     private static AudioClip _deathClipCached;
     private static AudioClip _damageClipCached;
@@ -55,7 +58,46 @@ public class SimpleHealth : MonoBehaviour
         if (maxHp < 1) maxHp = 1;
         currentHp = maxHp;
         animator = GetComponent<Animator>();
+        CacheAnimatorParams();
         invulnerableUntil = Time.time + spawnInvulnerability;
+    }
+
+    void CacheAnimatorParams()
+    {
+        _hasHurtTrigger = false;
+        _hasDeathTrigger = false;
+        _hasNoBloodBool = false;
+        if (animator == null || animator.runtimeAnimatorController == null)
+            return;
+
+        foreach (AnimatorControllerParameter p in animator.parameters)
+        {
+            if (p.type == AnimatorControllerParameterType.Trigger && p.name == "Hurt")
+                _hasHurtTrigger = true;
+            else if (p.type == AnimatorControllerParameterType.Trigger && p.name == "Death")
+                _hasDeathTrigger = true;
+            else if (p.type == AnimatorControllerParameterType.Bool && p.name == "noBlood")
+                _hasNoBloodBool = true;
+        }
+    }
+
+    void TriggerHurt()
+    {
+        if (_hasHurtTrigger && animator != null)
+            animator.SetTrigger("Hurt");
+    }
+
+    void TriggerDeath()
+    {
+        if (animator == null)
+            return;
+
+        ClearNonDeathTriggers(animator);
+        HeroKnight heroKnight = GetComponent<HeroKnight>();
+        if (heroKnight != null && _hasNoBloodBool)
+            animator.SetBool("noBlood", heroKnight.NoBlood);
+        if (_hasDeathTrigger)
+            animator.SetTrigger("Death");
     }
 
     public bool IsDead => isDead;
@@ -100,27 +142,21 @@ public class SimpleHealth : MonoBehaviour
                 return true;
 
             if (animator != null && animator.runtimeAnimatorController != null)
-                animator.SetTrigger("Hurt");
+                TriggerHurt();
             return true;
         }
 
         if (currentHp > 0)
         {
             if (animator != null && animator.runtimeAnimatorController != null)
-                animator.SetTrigger("Hurt");
+                TriggerHurt();
             return true;
         }
 
         isDead = true;
         PlayDeathSound();
         if (animator != null)
-        {
-            ClearNonDeathTriggers(animator);
-            HeroKnight heroKnight = GetComponent<HeroKnight>();
-            if (heroKnight != null)
-                animator.SetBool("noBlood", heroKnight.NoBlood);
-            animator.SetTrigger("Death");
-        }
+            TriggerDeath();
         Died?.Invoke(gameObject);
         EnterDeathStasis();
         return true;
